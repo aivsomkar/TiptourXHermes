@@ -215,6 +215,31 @@ final class MCPServer {
             }
             respond(envelope: env, result: ["tools": list], on: connection)
 
+        case "tools/call":
+            guard case .object(let params) = env.params ?? .null,
+                  case .string(let toolName) = params["name"] ?? .null,
+                  let tool = tools[toolName]
+            else {
+                respondError(envelope: env, code: -32601,
+                             message: "tool not found", on: connection)
+                return
+            }
+            let arguments = params["arguments"] ?? .object([:])
+            do {
+                let text = try await tool.call(arguments)
+                let result: [String: Any] = [
+                    "content": [["type": "text", "text": text]],
+                    "isError": false,
+                ]
+                respond(envelope: env, result: result, on: connection)
+            } catch {
+                let result: [String: Any] = [
+                    "content": [["type": "text", "text": "\(error)"]],
+                    "isError": true,
+                ]
+                respond(envelope: env, result: result, on: connection)
+            }
+
         default:
             respondError(envelope: env, code: -32601, message: "method not found: \(method)", on: connection)
         }

@@ -64,4 +64,35 @@ final class MCPServerTests: XCTestCase {
         XCTAssertNotNil(tools.first?["description"])
         XCTAssertNotNil(tools.first?["inputSchema"])
     }
+
+    @MainActor
+    func testToolsCallSpeakReturnsSuccess() async throws {
+        let server = MCPServer(name: "test")
+        server.register(SpeakTool())
+        let url = try server.start()
+        defer { server.stop() }
+        let resp = try await postJSON(to: url, body: [
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": ["name": "speak", "arguments": ["text": "test"]]
+        ])
+        let result = resp["result"] as? [String: Any]
+        XCTAssertEqual(result?["isError"] as? Bool, false)
+        let content = (result?["content"] as? [[String: Any]])?.first
+        XCTAssertEqual(content?["type"] as? String, "text")
+        XCTAssertTrue((content?["text"] as? String ?? "").contains("test"))
+    }
+
+    @MainActor
+    func testToolsCallUnknownToolReturnsError() async throws {
+        let server = MCPServer(name: "test")
+        let url = try server.start()
+        defer { server.stop() }
+        let resp = try await postJSON(to: url, body: [
+            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "params": ["name": "nope", "arguments": [:]]
+        ])
+        XCTAssertNotNil(resp["error"])
+        let error = resp["error"] as? [String: Any]
+        XCTAssertEqual(error?["code"] as? Int, -32601)
+    }
 }
