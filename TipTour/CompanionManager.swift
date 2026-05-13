@@ -460,20 +460,25 @@ final class CompanionManager: ObservableObject {
     func start() {
         // MCP server setup: register Mac-side tools, start the listener,
         // and hand the URL to HermesClient so the next session/new registers
-        // the server. If the listener fails to bind, Hermes still works for
-        // pure text chat but can't call our local tools.
-        let resolver = AccessibilityTreeResolver()
-        mcpServer.register(SpeakTool())
-        mcpServer.register(ScreenshotTool())
-        mcpServer.register(A11yTreeTool(resolver: resolver))
-        mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
-        do {
-            let url = try mcpServer.start()
-            hermesClient.mcpServerURL = url
-            NSLog("[CompanionManager] MCP server up at %@", url.absoluteString)
-        } catch {
-            NSLog("[CompanionManager] MCP server failed to start: %@; Hermes will run without tools", "\(error)")
-            hermesClient.mcpServerURL = nil
+        // the server. Guarded against re-entry so a second start() call
+        // doesn't replace live tool instances (and their shared
+        // AccessibilityTreeResolver) with fresh ones. If the listener fails
+        // to bind on first try, Hermes still works for pure text chat but
+        // can't call our local tools.
+        if hermesClient.mcpServerURL == nil {
+            let resolver = AccessibilityTreeResolver()
+            mcpServer.register(SpeakTool())
+            mcpServer.register(ScreenshotTool())
+            mcpServer.register(A11yTreeTool(resolver: resolver))
+            mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
+            do {
+                let url = try mcpServer.start()
+                hermesClient.mcpServerURL = url
+                NSLog("[CompanionManager] MCP server up at %@", url.absoluteString)
+            } catch {
+                NSLog("[CompanionManager] MCP server failed to start: %@; Hermes will run without tools", "\(error)")
+                hermesClient.mcpServerURL = nil
+            }
         }
 
         refreshAllPermissions()
@@ -547,8 +552,8 @@ final class CompanionManager: ObservableObject {
     // demonstration capture via HermesClient.
 
     func stop() {
-        hermesClient.stop()
         mcpServer.stop()
+        hermesClient.stop()
         globalPushToTalkShortcutMonitor.stop()
         overlayWindowManager.hideOverlay()
         shortcutTransitionCancellable?.cancel()

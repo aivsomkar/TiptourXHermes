@@ -49,6 +49,15 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
 
     // MARK: - Global ⌥⇧H shortcut
 
+    /// Installs both a global and a local NSEvent monitor for ⌥⇧H so the
+    /// chat window opens whether or not TipTour has focus.
+    ///
+    /// Known gotcha: global NSEvent monitors are observe-only — they can't
+    /// swallow events. Pressing ⌥⇧H inside a text field in another app will
+    /// open our chat AND insert whatever glyph that chord types in the
+    /// current keyboard layout (Ó in US English; varies elsewhere). If this
+    /// gets annoying, switch to a chord that doesn't produce a glyph
+    /// (e.g. ⌃⌥H) by editing isShortcut(_:).
     private func installGlobalShortcut() {
         let handler: (NSEvent) -> Void = { [weak self] event in
             self?.handleEvent(event)
