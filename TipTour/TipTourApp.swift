@@ -43,8 +43,7 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
 
         playLaunchSound()
 
-        TipTourAnalytics.configure()
-        TipTourAnalytics.trackAppOpened()
+        // Analytics removed during rebrand; see Plan 2 if reinstating.
 
         menuBarPanelManager = MenuBarPanelManager(companionManager: companionManager)
         agentOverlayWindowController = AgentOverlayWindowController.shared

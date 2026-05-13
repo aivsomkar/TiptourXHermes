@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AA00BB062F6500060039DA55 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = AA00BB052F6500050039DA55 /* PostHog */; };
 		B626385B2FB2581000BDE96A /* BundledSkills in Resources */ = {isa = PBXBuildFile; fileRef = B626385C2FB2581000BDE96A /* BundledSkills */; };
 /* End PBXBuildFile section */
 
@@ -213,7 +212,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA00BB062F6500060039DA55 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,7 +274,6 @@
 			);
 			name = "tiptour-macos";
 			packageProductDependencies = (
-				AA00BB052F6500050039DA55 /* PostHog */,
 			);
 			productName = TipTour;
 			productReference = 28F22CBF2F56440300A0FC59 /* TipTour.app */;
@@ -361,7 +358,6 @@
 			mainGroup = 28F22CB62F56440300A0FC59;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 28F22CC02F56440300A0FC59 /* Products */;
@@ -841,22 +837,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AA00BB052F6500050039DA55 /* PostHog */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */;
-			productName = PostHog;
-		};
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 28F22CB72F56440300A0FC59 /* Project object */;
