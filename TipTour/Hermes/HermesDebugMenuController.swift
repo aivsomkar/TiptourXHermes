@@ -32,12 +32,12 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
         header.isEnabled = false
         menu.addItem(header)
 
-        // Menu hint shows "⌥Space" next to the item. The real activation
+        // Menu hint shows "⌥⇧H" next to the item. The real activation
         // path is the global event monitor installed below — NSMenuItem
         // key equivalents only fire when the app is active, and a menu-
         // bar-only LSUIElement app rarely is.
-        let talk = NSMenuItem(title: "Talk to Hermes…", action: #selector(openChat), keyEquivalent: " ")
-        talk.keyEquivalentModifierMask = [.option]
+        let talk = NSMenuItem(title: "Talk to Hermes…", action: #selector(openChat), keyEquivalent: "h")
+        talk.keyEquivalentModifierMask = [.option, .shift]
         talk.target = self
         menu.addItem(talk)
 
@@ -49,16 +49,17 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
 
     // MARK: - Global ⌥+Space shortcut
 
-    /// Installs both a global and a local NSEvent monitor for ⌥+Space.
+    /// Installs both a global and a local NSEvent monitor for ⌥⇧H.
     /// Global fires when another app is focused; local fires when we are
     /// focused (and lets us swallow the keystroke so it doesn't also
-    /// insert a non-breaking space).
+    /// type a special character).
     ///
-    /// Side note: pressing ⌥+Space inside text fields in OTHER apps
-    /// will both open our chat AND insert a non-breaking space — global
-    /// monitors are observe-only and can't swallow events. If that
-    /// annoys you, switch to a less common chord (e.g. ⌃⌥H) by editing
-    /// the modifier/key check in handleEvent(_:).
+    /// Side note: pressing ⌥⇧H inside text fields in OTHER apps will
+    /// both open our chat AND insert whatever character that chord types
+    /// in the current keyboard layout (Ó in US English, varies elsewhere).
+    /// Global monitors are observe-only and can't swallow events. If
+    /// that becomes annoying, switch to a chord that doesn't produce
+    /// a glyph (e.g. ⌃⌥H) by editing isShortcut(_:).
     private func installGlobalShortcut() {
         let handler: (NSEvent) -> Void = { [weak self] event in
             self?.handleEvent(event)
@@ -69,16 +70,18 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if Self.isShortcut(event) {
                 handler(event)
-                return nil   // swallow so it doesn't also fire as a typed space
+                return nil   // swallow so it doesn't also type a glyph
             }
             return event
         }
     }
 
-    /// ⌥+Space with no other modifiers and the space key (keyCode 49).
+    /// ⌥⇧H with no other modifiers. The H key is keyCode 4. We compare
+    /// modifierFlags & deviceIndependentFlagsMask against exactly
+    /// [.option, .shift] so chords like ⌥⇧⌘H don't accidentally match.
     private static func isShortcut(_ event: NSEvent) -> Bool {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        return event.keyCode == 49 && mods == [.option]
+        return event.keyCode == 4 && mods == [.option, .shift]
     }
 
     private func handleEvent(_ event: NSEvent) {
