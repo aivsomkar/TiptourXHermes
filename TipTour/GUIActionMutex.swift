@@ -1,4 +1,5 @@
-// TipTour/Agents/Core/GUIActionMutex.swift
+// TipTour/GUIActionMutex.swift
+// Moved from TipTour/Agents/Core/ during rebrand strip.
 
 import Foundation
 
@@ -18,7 +19,7 @@ import Foundation
 ///      multi-step Cmd+V + clipboard restore) runs atomically — no other
 ///      caller can squeeze a click between the down and the up.
 ///
-/// FIFO ordering: callers acquire in arrival order, so a click queued
+/// FIFO ordering: callers acquire in arrival order, so a clock queued
 /// first lands first. We deliberately avoid priority/cancellation
 /// semantics here — the lock is a fairness guarantee, not a scheduler.
 actor GUIActionMutex {
