@@ -11,7 +11,7 @@ actor TaskAgent: Identifiable {
     let taskType: TaskType
     let provider: (any LLMProvider)?
     let swarmManager: AgentSwarmManager
-    let toolBox: ToolBox
+    let toolBox: Any  // ToolBox removed with Tools/ strip
 
     private var conversationHistory: [LLMMessage] = []
     private var interruptQueue: [String] = []
@@ -26,7 +26,7 @@ actor TaskAgent: Identifiable {
     /// Per-agent shell session. Lazily started on the first
     /// `interactive_shell` tool call; torn down by
     /// `markTerminated` / `handleCancellation`.
-    private let interactiveShellSession: InteractiveShellSession
+    private let interactiveShellSession: Any  // InteractiveShellSession removed with Tools/ strip
     /// Number of times we've forced a re-prompt because the agent
     /// answered text-only on a tool-mandatory task. Capped so a
     /// genuinely-uncooperative model doesn't loop forever.
@@ -82,14 +82,9 @@ actor TaskAgent: Identifiable {
         // the agent terminates.
         let workspaceURL = Self.createWorkspace(forAgentId: newId)
         self.workspaceURL = workspaceURL
-        let shellSession = InteractiveShellSession(initialWorkingDirectory: workspaceURL)
-        self.interactiveShellSession = shellSession
-
-        self.toolBox = ToolBox.build(
-            for: taskType,
-            interactiveShellSession: shellSession,
-            workspaceURL: workspaceURL
-        )
+        // Tools/ stripped — stubs until Swarm/ is also removed
+        self.interactiveShellSession = NSObject()
+        self.toolBox = NSObject()
     }
 
     /// Create the agent's workspace directory. Returns nil only if
@@ -296,7 +291,7 @@ actor TaskAgent: Identifiable {
         // subprocess per dismissed agent. Workspace files stay on disk
         // so the user can inspect what the agent did after the fact —
         // they're under ~/Library/Application Support/TipTour/agent-workspaces/.
-        Task { await interactiveShellSession.shutdown() }
+        // interactiveShellSession.shutdown() — removed with Tools/ strip
     }
 
     // MARK: - Private helpers
@@ -570,12 +565,12 @@ actor TaskAgent: Identifiable {
     }
 
     private func availableToolDefinitions() -> [LLMTool] {
-        toolBox.definitions
+        []  // toolBox.definitions — removed with Tools/ strip
     }
 
     private func dispatchToolCall(_ toolCall: LLMToolCall) async -> String {
         toolCallCount += 1
-        return await toolBox.execute(toolCall: toolCall)
+        return "error: Tools/ stripped"  // toolBox.execute — removed with Tools/ strip
     }
 
     /// Outcome of running a batch of tool calls in sequence.
@@ -645,7 +640,7 @@ actor TaskAgent: Identifiable {
         // cancellation path too. `markTerminated` does the same when
         // SwarmManager initiates termination, but self-detection runs
         // before that callback in some race orderings.
-        await interactiveShellSession.shutdown()
+        // interactiveShellSession.shutdown() — removed with Tools/ strip
         // Do NOT overwrite the state if SwarmManager already set
         // .terminated — that's the canonical "user dismissed me" state.
         // If we got here from a self-detected cancellation (e.g. parent
