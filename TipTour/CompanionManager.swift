@@ -78,6 +78,17 @@ final class CompanionManager: ObservableObject {
     /// transition cue interrupts any previous one rather than overlapping.
     private var voiceStateSoundPlayer: AVAudioPlayer?
 
+    /// The single Hermes client shared by the voice loop (ask_hermes tool)
+    /// and the Talk-to-Hermes chat window. Launches a Python subprocess
+    /// lazily on first send; stays alive for the app's lifetime.
+    let hermesClient = HermesClient()
+
+    /// In-process MCP server exposing speak / take_screenshot / get_a11y_tree
+    /// / point_at to Hermes. Started in `start()`; the URL is set on
+    /// hermesClient before the first send so Hermes registers the MCP
+    /// server during session/new.
+    let mcpServer = MCPServer(name: "tiptour-tools")
+
     // TODO(plan-2): route background-agent state through HermesClient.
     private var pendingAgentCompletionNotices: [String] = []
 
@@ -447,6 +458,24 @@ final class CompanionManager: ObservableObject {
     // MARK: - Lifecycle
 
     func start() {
+        // MCP server setup: register Mac-side tools, start the listener,
+        // and hand the URL to HermesClient so the next session/new registers
+        // the server. If the listener fails to bind, Hermes still works for
+        // pure text chat but can't call our local tools.
+        let resolver = AccessibilityTreeResolver()
+        mcpServer.register(SpeakTool())
+        mcpServer.register(ScreenshotTool())
+        mcpServer.register(A11yTreeTool(resolver: resolver))
+        mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
+        do {
+            let url = try mcpServer.start()
+            hermesClient.mcpServerURL = url
+            NSLog("[CompanionManager] MCP server up at %@", url.absoluteString)
+        } catch {
+            NSLog("[CompanionManager] MCP server failed to start: %@; Hermes will run without tools", "\(error)")
+            hermesClient.mcpServerURL = nil
+        }
+
         refreshAllPermissions()
         print("🔑 TipTour start — accessibility: \(hasAccessibilityPermission), screen: \(hasScreenRecordingPermission), mic: \(hasMicrophonePermission), screenContent: \(hasScreenContentPermission), onboarded: \(hasCompletedOnboarding)")
         startPermissionPolling()
@@ -518,6 +547,8 @@ final class CompanionManager: ObservableObject {
     // demonstration capture via HermesClient.
 
     func stop() {
+        hermesClient.stop()
+        mcpServer.stop()
         globalPushToTalkShortcutMonitor.stop()
         overlayWindowManager.hideOverlay()
         shortcutTransitionCancellable?.cancel()

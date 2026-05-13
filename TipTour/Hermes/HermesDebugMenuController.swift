@@ -1,9 +1,9 @@
 // TipTour/Hermes/HermesDebugMenuController.swift
 //
-// Owns the second menu-bar status item ("Hermes" with a debug menu),
-// the floating chat window, a single HermesClient instance, and the
-// in-process MCPServer that exposes Mac-side tools (Plan 3a: speak;
-// Plan 3b adds take_screenshot / get_a11y_tree / point_at).
+// Owns the second menu-bar status item ("Hermes" with a debug menu)
+// and the floating chat window. The HermesClient + in-process MCPServer
+// are shared with the voice loop and OWNED by CompanionManager — this
+// controller just holds references.
 
 import AppKit
 
@@ -11,23 +11,20 @@ import AppKit
 final class HermesDebugMenuController: NSObject, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var window: NSWindow?
-    private let client = HermesClient()
-    private let mcpServer = MCPServer(name: "tiptour-tools")
+    private let client: HermesClient
+    private let mcpServer: MCPServer
     private weak var companionManager: CompanionManager?
     private var globalMonitor: Any?
     private var localMonitor: Any?
 
+    init(client: HermesClient, mcpServer: MCPServer) {
+        self.client = client
+        self.mcpServer = mcpServer
+        super.init()
+    }
+
     func install(companionManager: CompanionManager) {
         self.companionManager = companionManager
-
-        // Build a shared AccessibilityTreeResolver so A11yTreeTool and
-        // PointAtTool see the same a11y cache + permissions state.
-        let resolver = AccessibilityTreeResolver()
-
-        mcpServer.register(SpeakTool())
-        mcpServer.register(ScreenshotTool())
-        mcpServer.register(A11yTreeTool(resolver: resolver))
-        mcpServer.register(PointAtTool(resolver: resolver, companionManager: companionManager))
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.title = "🛠 Hermes"
@@ -50,19 +47,8 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
         installGlobalShortcut()
     }
 
-    // MARK: - Global ⌥+Space shortcut
+    // MARK: - Global ⌥⇧H shortcut
 
-    /// Installs both a global and a local NSEvent monitor for ⌥⇧H.
-    /// Global fires when another app is focused; local fires when we are
-    /// focused (and lets us swallow the keystroke so it doesn't also
-    /// type a special character).
-    ///
-    /// Side note: pressing ⌥⇧H inside text fields in OTHER apps will
-    /// both open our chat AND insert whatever character that chord types
-    /// in the current keyboard layout (Ó in US English, varies elsewhere).
-    /// Global monitors are observe-only and can't swallow events. If
-    /// that becomes annoying, switch to a chord that doesn't produce
-    /// a glyph (e.g. ⌃⌥H) by editing isShortcut(_:).
     private func installGlobalShortcut() {
         let handler: (NSEvent) -> Void = { [weak self] event in
             self?.handleEvent(event)
@@ -73,15 +59,12 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if Self.isShortcut(event) {
                 handler(event)
-                return nil   // swallow so it doesn't also type a glyph
+                return nil
             }
             return event
         }
     }
 
-    /// ⌥⇧H with no other modifiers. The H key is keyCode 4. We compare
-    /// modifierFlags & deviceIndependentFlagsMask against exactly
-    /// [.option, .shift] so chords like ⌥⇧⌘H don't accidentally match.
     private static func isShortcut(_ event: NSEvent) -> Bool {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         return event.keyCode == 4 && mods == [.option, .shift]
@@ -94,14 +77,6 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
 
     @objc private func openChat() {
         if window == nil {
-            do {
-                let url = try mcpServer.start()
-                client.mcpServerURL = url
-                NSLog("[Hermes] MCP server up at %@", url.absoluteString)
-            } catch {
-                NSLog("[Hermes] MCP server failed to start: %@; chat opens without tools", "\(error)")
-                client.mcpServerURL = nil
-            }
             let w = makeHermesChatWindow(client: client)
             w.delegate = self
             window = w
@@ -112,14 +87,12 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Fires for every close path (red X, ⌘W, programmatic `close()`,
-    /// `orderOut:`-on-close, etc).
+    /// Closing the chat window must NOT terminate the Hermes subprocess
+    /// — it's shared with the voice path. Just drop the window reference
+    /// so a future openChat() builds a fresh window pointing at the same
+    /// HermesClient.
     func windowWillClose(_ notification: Notification) {
         guard (notification.object as? NSWindow) === window else { return }
-        NSLog("[HermesDebugMenuController] windowWillClose — terminating Hermes + MCP server")
-        client.stop()
-        mcpServer.stop()
-        client.mcpServerURL = nil
         window = nil
     }
 }

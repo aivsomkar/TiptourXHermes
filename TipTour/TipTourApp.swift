@@ -47,10 +47,12 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
         // Analytics removed during rebrand; see Plan 2 if reinstating.
 
         menuBarPanelManager = MenuBarPanelManager(companionManager: companionManager)
-        hermesDebugMenu = HermesDebugMenuController()
+        companionManager.start()  // starts MCP server + sets hermesClient.mcpServerURL
+        hermesDebugMenu = HermesDebugMenuController(
+            client: companionManager.hermesClient,
+            mcpServer: companionManager.mcpServer
+        )
         hermesDebugMenu?.install(companionManager: companionManager)
-        // AgentOverlayWindowController.shared removed with Overlay/ strip
-        companionManager.start()
         // Auto-open the panel if the user still needs to do something:
         // either they haven't onboarded yet, or permissions were revoked.
         if !companionManager.hasCompletedOnboarding || !companionManager.allPermissionsGranted {
