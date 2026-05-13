@@ -10,7 +10,6 @@
 import AVFoundation
 import ServiceManagement
 import SwiftUI
-import Sparkle
 
 @main
 struct TipTour_HermesApp: App {
@@ -33,7 +32,6 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanelManager: MenuBarPanelManager?
     private var agentOverlayWindowController: AgentOverlayWindowController?
     private let companionManager = CompanionManager()
-    private var sparkleUpdaterController: SPUStandardUpdaterController?
     /// Held as a stored property so the player isn't deallocated mid-playback.
     private var launchSoundPlayer: AVAudioPlayer?
 
@@ -57,11 +55,6 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
             menuBarPanelManager?.showPanelOnLaunch()
         }
         registerAsLoginItemIfNeeded()
-        // Sparkle auto-update — only kicks in once SUFeedURL and
-        // SUPublicEDKey are populated in Info.plist (via the
-        // INFOPLIST_KEY_* settings in the project's build settings).
-        // Until then this is a no-op so debug builds don't error.
-        startSparkleUpdater()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -101,31 +94,4 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func startSparkleUpdater() {
-        // Sparkle reads SUFeedURL + SUPublicEDKey from the bundle's
-        // Info.plist. If they're missing (e.g. local dev build before
-        // Sparkle keys are configured), starting the updater would
-        // throw — short-circuit so debug builds run cleanly.
-        let infoDict = Bundle.main.infoDictionary
-        let hasFeedURL = (infoDict?["SUFeedURL"] as? String)?.isEmpty == false
-        let hasPublicKey = (infoDict?["SUPublicEDKey"] as? String)?.isEmpty == false
-        guard hasFeedURL && hasPublicKey else {
-            print("⚠️ TipTour: Sparkle updater skipped — SUFeedURL or SUPublicEDKey not set in Info.plist (this is fine for local debug builds)")
-            return
-        }
-
-        let updaterController = SPUStandardUpdaterController(
-            startingUpdater: false,
-            updaterDelegate: nil,
-            userDriverDelegate: nil
-        )
-        self.sparkleUpdaterController = updaterController
-
-        do {
-            try updaterController.updater.start()
-            print("🎯 TipTour: Sparkle updater started")
-        } catch {
-            print("⚠️ TipTour: Sparkle updater failed to start: \(error)")
-        }
-    }
 }
