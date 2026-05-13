@@ -89,9 +89,23 @@ struct FSCapabilities: Encodable {
     let writeTextFile: Bool
 }
 
+// MARK: - MCP server registration (for NewSessionRequest.mcpServers)
+
+struct HttpHeader: Encodable {
+    let name: String
+    let value: String
+}
+
+struct HttpMcpServerEntry: Encodable {
+    let type: String = "http"
+    let name: String
+    let url: String
+    let headers: [HttpHeader]
+}
+
 struct NewSessionRequest: Encodable {
     let cwd: String
-    let mcpServers: [JSONValue]   // empty for Plan 2
+    let mcpServers: [HttpMcpServerEntry]
 }
 
 struct PromptRequest: Encodable {

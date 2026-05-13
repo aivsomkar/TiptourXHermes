@@ -11,6 +11,12 @@ final class HermesClient: ObservableObject {
     @Published private(set) var isWorking: Bool = false
     @Published private(set) var lastError: String?
 
+    /// MCP server URL to register with Hermes on `session/new`. Set this
+    /// BEFORE the first `send()` call. Subsequent changes only take
+    /// effect after `stop()` + a fresh `send()` (which recycles the
+    /// session). When `nil`, no MCP servers are registered.
+    var mcpServerURL: URL?
+
     // MARK: Init
     init(hermesHome: URL? = nil) {
         self.hermesHomeOverride = hermesHome
@@ -216,7 +222,17 @@ final class HermesClient: ObservableObject {
 
     private func openSession() async throws {
         let cwd = FileManager.default.currentDirectoryPath
-        let req = NewSessionRequest(cwd: cwd, mcpServers: [])
+        let mcpServers: [HttpMcpServerEntry]
+        if let url = mcpServerURL {
+            mcpServers = [HttpMcpServerEntry(
+                name: "tiptour-tools",
+                url: url.absoluteString,
+                headers: []
+            )]
+        } else {
+            mcpServers = []
+        }
+        let req = NewSessionRequest(cwd: cwd, mcpServers: mcpServers)
         let result: NewSessionResult = try await sendRequest(method: "session/new", params: req)
         self.sessionId = result.sessionId
     }
