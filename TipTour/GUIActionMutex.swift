@@ -13,8 +13,8 @@ import Foundation
 /// Every entry point in `ActionExecutor` (`click`, `pressKeyboardShortcut`,
 /// `typeText`) runs inside `runExclusive` so:
 ///
-///   1. The voice-mode `WorkflowRunner` and background `TaskAgent`s
-///      share the cursor cleanly without trampling each other.
+///   1. The voice-mode session and any future Hermes-driven background
+///      operations share the cursor cleanly without trampling each other.
 ///   2. Each caller's action sequence (move → down → up, or paste-typing's
 ///      multi-step Cmd+V + clipboard restore) runs atomically — no other
 ///      caller can squeeze a click between the down and the up.
