@@ -65,19 +65,38 @@ final class HermesClient: ObservableObject {
     }
 
     func stop() {
-        guard let proc = process, proc.isRunning else {
-            process = nil
+        guard let proc = process else {
             sessionId = nil
+            currentAgentTurn = nil
             return
         }
-        proc.terminate()
-        // 2-second SIGTERM grace; SIGKILL escalation lives in Task 8.
-        let deadline = Date().addingTimeInterval(2)
+        defer {
+            process = nil
+            stdinPipe = nil
+            stdoutPipe = nil
+            stderrPipe = nil
+            sessionId = nil
+            currentAgentTurn = nil
+            pendingResponses.values.forEach {
+                $0.resume(throwing: HermesClientError.subprocessGone)
+            }
+            pendingResponses.removeAll()
+        }
+        if !proc.isRunning { return }
+        proc.terminate()               // SIGTERM
+        if waitForExit(proc, seconds: 2) { return }
+        proc.interrupt()               // SIGINT
+        if waitForExit(proc, seconds: 1) { return }
+        kill(proc.processIdentifier, SIGKILL)   // last resort
+        _ = waitForExit(proc, seconds: 1)
+    }
+
+    private func waitForExit(_ proc: Process, seconds: Double) -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
         while proc.isRunning && Date() < deadline {
             Thread.sleep(forTimeInterval: 0.05)
         }
-        process = nil
-        sessionId = nil
+        return !proc.isRunning
     }
 
     // MARK: Types (unchanged)

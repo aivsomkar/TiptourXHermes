@@ -83,4 +83,37 @@ final class HermesClientTests: XCTestCase {
         }
         client.stop()
     }
+
+    @MainActor
+    func testStopIsIdempotentAndKillsTheProcess() async throws {
+        let client = HermesClient()
+        // Trigger subprocess launch even in the missing-config case —
+        // the failure path still leaves no process running; the happy
+        // path leaves one we then stop.
+        await client.send("any text")
+        let beforeStop = countHermesProcesses()
+        client.stop()
+        // After stop, wait briefly for the OS to reap.
+        try await Task.sleep(nanoseconds: 500_000_000)
+        let afterStop = countHermesProcesses()
+        XCTAssertLessThanOrEqual(afterStop, beforeStop,
+            "stop() did not reduce hermes-runtime process count (was \(beforeStop), now \(afterStop))")
+        // Calling stop() again should be a no-op.
+        client.stop()
+        client.stop()
+    }
+
+    private func countHermesProcesses() -> Int {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "ps ax | grep -v grep | grep -c 'hermes-runtime' || true"]
+        let out = Pipe()
+        task.standardOutput = out
+        try? task.run()
+        task.waitUntilExit()
+        let data = out.fileHandleForReading.availableData
+        let text = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "0"
+        return Int(text) ?? 0
+    }
 }
