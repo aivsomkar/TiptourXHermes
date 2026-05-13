@@ -48,7 +48,7 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
 
         menuBarPanelManager = MenuBarPanelManager(companionManager: companionManager)
         hermesDebugMenu = HermesDebugMenuController()
-        hermesDebugMenu?.install()
+        hermesDebugMenu?.install(companionManager: companionManager)
         // AgentOverlayWindowController.shared removed with Overlay/ strip
         companionManager.start()
         // Auto-open the panel if the user still needs to do something:

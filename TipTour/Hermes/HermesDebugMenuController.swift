@@ -13,14 +13,21 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private let client = HermesClient()
     private let mcpServer = MCPServer(name: "tiptour-tools")
+    private weak var companionManager: CompanionManager?
     private var globalMonitor: Any?
     private var localMonitor: Any?
 
-    func install() {
-        // Register tools once. The server doesn't bind a port until
-        // openChat() — we want the loopback port allocated on demand
-        // and freed when the chat window closes.
+    func install(companionManager: CompanionManager) {
+        self.companionManager = companionManager
+
+        // Build a shared AccessibilityTreeResolver so A11yTreeTool and
+        // PointAtTool see the same a11y cache + permissions state.
+        let resolver = AccessibilityTreeResolver()
+
         mcpServer.register(SpeakTool())
+        mcpServer.register(ScreenshotTool())
+        mcpServer.register(A11yTreeTool(resolver: resolver))
+        mcpServer.register(PointAtTool(resolver: resolver, companionManager: companionManager))
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.title = "🛠 Hermes"
@@ -32,10 +39,6 @@ final class HermesDebugMenuController: NSObject, NSWindowDelegate {
         header.isEnabled = false
         menu.addItem(header)
 
-        // Menu hint shows "⌥⇧H" next to the item. The real activation
-        // path is the global event monitor installed below — NSMenuItem
-        // key equivalents only fire when the app is active, and a menu-
-        // bar-only LSUIElement app rarely is.
         let talk = NSMenuItem(title: "Talk to Hermes…", action: #selector(openChat), keyEquivalent: "h")
         talk.keyEquivalentModifierMask = [.option, .shift]
         talk.target = self
