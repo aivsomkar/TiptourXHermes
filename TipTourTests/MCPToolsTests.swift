@@ -22,8 +22,12 @@ final class MCPToolsTests: XCTestCase {
     @MainActor
     func testSpeakToolCallReturnsSuccessForValidText() async throws {
         let tool = SpeakTool()
-        let result = try await tool.call(.object(["text": .string("ok")]))
-        XCTAssertTrue(result.contains("ok"))
+        let blocks = try await tool.call(.object(["text": .string("ok")]))
+        guard case .text(let s) = blocks.first else {
+            XCTFail("expected text block")
+            return
+        }
+        XCTAssertTrue(s.contains("ok"))
     }
 
     @MainActor

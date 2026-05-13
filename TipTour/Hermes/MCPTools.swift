@@ -9,6 +9,13 @@ import AVFoundation
 
 // MARK: - Tool protocol
 
+// A single piece of content returned by a tool call. Mirrors the MCP
+// spec's content-block shape so MCPServer can serialise it directly.
+enum MCPToolContent {
+    case text(String)
+    case image(base64: String, mimeType: String)
+}
+
 protocol MCPTool: Sendable {
     /// Tool identifier passed to MCP tools/list and tools/call.
     var name: String { get }
@@ -16,10 +23,9 @@ protocol MCPTool: Sendable {
     var description: String { get }
     /// JSON Schema describing the expected `arguments` object.
     var inputSchema: JSONValue { get }
-    /// Run the tool. Returns a human-readable result string. Throw
-    /// `MCPToolError` to indicate a tool failure; the server wraps the
-    /// thrown error into `{ isError: true, content: [...] }`.
-    @MainActor func call(_ arguments: JSONValue) async throws -> String
+    /// Run the tool. Return one or more content blocks (text, image, or
+    /// both). Throw `MCPToolError` to indicate a tool failure.
+    @MainActor func call(_ arguments: JSONValue) async throws -> [MCPToolContent]
 }
 
 enum MCPToolError: Error, CustomStringConvertible {
@@ -58,7 +64,7 @@ final class SpeakTool: MCPTool {
     /// rapid back-to-back calls do not conflict.
     private let synth = AVSpeechSynthesizer()
 
-    func call(_ arguments: JSONValue) async throws -> String {
+    func call(_ arguments: JSONValue) async throws -> [MCPToolContent] {
         guard case .object(let dict) = arguments,
               case .string(let text) = dict["text"] ?? .null,
               !text.isEmpty
@@ -69,6 +75,6 @@ final class SpeakTool: MCPTool {
         let utterance = AVSpeechUtterance(string: text)
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate
         synth.speak(utterance)
-        return "Speaking: \(text)"
+        return [.text("Speaking: \(text)")]
     }
 }

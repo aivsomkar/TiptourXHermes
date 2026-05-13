@@ -226,9 +226,17 @@ final class MCPServer {
             }
             let arguments = params["arguments"] ?? .object([:])
             do {
-                let text = try await tool.call(arguments)
+                let blocks = try await tool.call(arguments)
+                let contentJSON: [[String: Any]] = blocks.map { block in
+                    switch block {
+                    case .text(let s):
+                        return ["type": "text", "text": s]
+                    case .image(let b64, let mime):
+                        return ["type": "image", "data": b64, "mimeType": mime]
+                    }
+                }
                 let result: [String: Any] = [
-                    "content": [["type": "text", "text": text]],
+                    "content": contentJSON,
                     "isError": false,
                 ]
                 respond(envelope: env, result: result, on: connection)
