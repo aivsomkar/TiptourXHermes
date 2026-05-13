@@ -71,3 +71,173 @@ struct JSONRPCError: Decodable, Error, Equatable {
     let message: String
     let data: JSONValue?
 }
+
+// MARK: - ACP requests (Client → Agent)
+
+struct InitializeRequest: Encodable {
+    let protocolVersion: Int = 1
+    let clientCapabilities: ClientCapabilities
+}
+
+struct ClientCapabilities: Encodable {
+    let fs: FSCapabilities
+    let terminal: Bool
+}
+
+struct FSCapabilities: Encodable {
+    let readTextFile: Bool
+    let writeTextFile: Bool
+}
+
+struct NewSessionRequest: Encodable {
+    let cwd: String
+    let mcpServers: [JSONValue]   // empty for Plan 2
+}
+
+struct PromptRequest: Encodable {
+    let sessionId: String
+    let prompt: [TextBlock]
+}
+
+struct TextBlock: Encodable {
+    let type: String = "text"
+    let text: String
+}
+
+// MARK: - Agent → Client: server-initiated request (session/request_permission)
+
+struct PermissionResponse: Encodable {
+    let outcome: PermissionOutcome
+}
+
+struct PermissionOutcome: Encodable {
+    let outcome: String     // "selected"
+    let optionId: String    // "allow"
+}
+
+// MARK: - ACP results (Agent → Client responses)
+
+struct InitializeResult: Decodable {
+    let protocolVersion: Int
+    let agentCapabilities: JSONValue
+    let agentInfo: AgentInfo?
+    let authMethods: [JSONValue]?
+}
+
+struct AgentInfo: Decodable {
+    let name: String
+    let version: String
+}
+
+struct NewSessionResult: Decodable {
+    let sessionId: String
+    let models: JSONValue?
+}
+
+struct PromptResult: Decodable {
+    let stopReason: String
+    let usage: UsageInfo?
+}
+
+struct UsageInfo: Decodable {
+    let inputTokens: Int
+    let outputTokens: Int
+    let totalTokens: Int
+    let cachedReadTokens: Int?
+    let thoughtTokens: Int?
+}
+
+// MARK: - Notifications (Agent → Client, no response expected)
+
+struct SessionUpdateNotification: Decodable {
+    let sessionId: String
+    let update: SessionUpdate
+}
+
+enum SessionUpdate: Decodable {
+    case agentMessageChunk(text: String)
+    case userMessageChunk(text: String)
+    case toolCallStart(id: String, name: String, args: JSONValue, location: JSONValue?)
+    case toolCallProgress(id: String, status: String, output: JSONValue?)
+    case toolCallEnd(id: String, status: String)
+    case availableCommandsUpdate(commands: [JSONValue])
+    case usageUpdate(size: Int?, used: Int)
+    case unknown(raw: JSONValue)
+
+    init(from decoder: Decoder) throws {
+        // We decode through JSONValue first so we can inspect the
+        // discriminator and fall back to .unknown(raw:) on anything we
+        // don't recognise. This makes the client tolerant to new ACP
+        // sessionUpdate variants the spec adds in the future.
+        let raw = try JSONValue(from: decoder)
+        guard case .object(let dict) = raw,
+              case .string(let kind) = dict["sessionUpdate"] ?? .null
+        else {
+            self = .unknown(raw: raw)
+            return
+        }
+
+        switch kind {
+        case "agent_message_chunk":
+            if case .object(let content) = dict["content"] ?? .null,
+               case .string(let text) = content["text"] ?? .null {
+                self = .agentMessageChunk(text: text)
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "user_message_chunk":
+            if case .object(let content) = dict["content"] ?? .null,
+               case .string(let text) = content["text"] ?? .null {
+                self = .userMessageChunk(text: text)
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "tool_call_start":
+            if case .string(let id) = dict["toolCallId"] ?? .null,
+               case .string(let name) = dict["name"] ?? .null {
+                self = .toolCallStart(
+                    id: id,
+                    name: name,
+                    args: dict["args"] ?? .null,
+                    location: dict["location"]
+                )
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "tool_call_progress":
+            if case .string(let id) = dict["toolCallId"] ?? .null,
+               case .string(let status) = dict["status"] ?? .null {
+                self = .toolCallProgress(id: id, status: status, output: dict["output"])
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "tool_call_end":
+            if case .string(let id) = dict["toolCallId"] ?? .null,
+               case .string(let status) = dict["status"] ?? .null {
+                self = .toolCallEnd(id: id, status: status)
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "available_commands_update":
+            if case .array(let cmds) = dict["availableCommands"] ?? .null {
+                self = .availableCommandsUpdate(commands: cmds)
+            } else if case .array(let cmds) = dict["commands"] ?? .null {
+                self = .availableCommandsUpdate(commands: cmds)
+            } else {
+                self = .unknown(raw: raw)
+            }
+        case "usage_update":
+            let size: Int? = {
+                if case .number(let n) = dict["size"] ?? .null { return Int(n) }
+                return nil
+            }()
+            if case .number(let used) = dict["used"] ?? .null {
+                self = .usageUpdate(size: size, used: Int(used))
+            } else {
+                self = .unknown(raw: raw)
+            }
+        default:
+            self = .unknown(raw: raw)
+        }
+    }
+}
