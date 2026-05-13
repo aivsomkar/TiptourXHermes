@@ -1,0 +1,13 @@
+node_modules/
+.build/
+DerivedData/
+.DS_Store
+worker/.dev.vars
+worker/.wrangler/
+*.xcuserstate
+
+# release.sh artifacts — large, regenerated each release, never source
+build/
+releases/
+*.xcarchive/
+*.dmg

@@ -1,0 +1,711 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA00BB032F6500030039DA55 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = AA00BB022F6500020039DA55 /* Sparkle */; };
+		AA00BB062F6500060039DA55 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = AA00BB052F6500050039DA55 /* PostHog */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		28F22CCD2F56440300A0FC59 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 28F22CB72F56440300A0FC59 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 28F22CBE2F56440300A0FC59;
+			remoteInfo = TipTour;
+		};
+		28F22CD72F56440300A0FC59 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 28F22CB72F56440300A0FC59 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 28F22CBE2F56440300A0FC59;
+			remoteInfo = TipTour;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		28F22CBF2F56440300A0FC59 /* TipTour.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TipTour.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		28F22CCC2F56440300A0FC59 /* tiptour-macosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B626385A2FB2581000BDE96A /* Exceptions for "TipTour" folder in "tiptour-macos" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				Agents/Skills/BundledSkills,
+			);
+			target = 28F22CBE2F56440300A0FC59 /* tiptour-macos */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		28F22CC12F56440300A0FC59 /* TipTour */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B626385A2FB2581000BDE96A /* Exceptions for "TipTour" folder in "tiptour-macos" target */,
+			);
+			path = TipTour;
+			sourceTree = "<group>";
+		};
+		28F22CCF2F56440300A0FC59 /* TipTourTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TipTourTests;
+			sourceTree = "<group>";
+		};
+		28F22CD92F56440300A0FC59 /* TipTourUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TipTourUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		28F22CBC2F56440300A0FC59 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00BB032F6500030039DA55 /* Sparkle in Frameworks */,
+				AA00BB062F6500060039DA55 /* PostHog in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CC92F56440300A0FC59 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CD32F56440300A0FC59 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		28F22CB62F56440300A0FC59 = {
+			isa = PBXGroup;
+			children = (
+				28F22CC12F56440300A0FC59 /* TipTour */,
+				28F22CCF2F56440300A0FC59 /* TipTourTests */,
+				28F22CD92F56440300A0FC59 /* TipTourUITests */,
+				28F22CC02F56440300A0FC59 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		28F22CC02F56440300A0FC59 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				28F22CBF2F56440300A0FC59 /* TipTour.app */,
+				28F22CCC2F56440300A0FC59 /* tiptour-macosTests.xctest */,
+				28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		28F22CBE2F56440300A0FC59 /* tiptour-macos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28F22CE02F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macos" */;
+			buildPhases = (
+				28F22CBB2F56440300A0FC59 /* Sources */,
+				28F22CBC2F56440300A0FC59 /* Frameworks */,
+				28F22CBD2F56440300A0FC59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				28F22CC12F56440300A0FC59 /* TipTour */,
+			);
+			name = "tiptour-macos";
+			packageProductDependencies = (
+				AA00BB022F6500020039DA55 /* Sparkle */,
+				AA00BB052F6500050039DA55 /* PostHog */,
+			);
+			productName = TipTour;
+			productReference = 28F22CBF2F56440300A0FC59 /* TipTour.app */;
+			productType = "com.apple.product-type.application";
+		};
+		28F22CCB2F56440300A0FC59 /* tiptour-macosTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28F22CE32F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macosTests" */;
+			buildPhases = (
+				28F22CC82F56440300A0FC59 /* Sources */,
+				28F22CC92F56440300A0FC59 /* Frameworks */,
+				28F22CCA2F56440300A0FC59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				28F22CCE2F56440300A0FC59 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				28F22CCF2F56440300A0FC59 /* TipTourTests */,
+			);
+			name = "tiptour-macosTests";
+			packageProductDependencies = (
+			);
+			productName = TipTourTests;
+			productReference = 28F22CCC2F56440300A0FC59 /* tiptour-macosTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		28F22CD52F56440300A0FC59 /* tiptour-macosUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28F22CE62F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macosUITests" */;
+			buildPhases = (
+				28F22CD22F56440300A0FC59 /* Sources */,
+				28F22CD32F56440300A0FC59 /* Frameworks */,
+				28F22CD42F56440300A0FC59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				28F22CD82F56440300A0FC59 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				28F22CD92F56440300A0FC59 /* TipTourUITests */,
+			);
+			name = "tiptour-macosUITests";
+			packageProductDependencies = (
+			);
+			productName = TipTourUITests;
+			productReference = 28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		28F22CB72F56440300A0FC59 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					28F22CBE2F56440300A0FC59 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					28F22CCB2F56440300A0FC59 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 28F22CBE2F56440300A0FC59;
+					};
+					28F22CD52F56440300A0FC59 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 28F22CBE2F56440300A0FC59;
+					};
+				};
+			};
+			buildConfigurationList = 28F22CBA2F56440300A0FC59 /* Build configuration list for PBXProject "tiptour-macos" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 28F22CB62F56440300A0FC59;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AA00BB012F6500010039DA55 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 28F22CC02F56440300A0FC59 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				28F22CBE2F56440300A0FC59 /* tiptour-macos */,
+				28F22CCB2F56440300A0FC59 /* tiptour-macosTests */,
+				28F22CD52F56440300A0FC59 /* tiptour-macosUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		28F22CBD2F56440300A0FC59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CCA2F56440300A0FC59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CD42F56440300A0FC59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		28F22CBB2F56440300A0FC59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CC82F56440300A0FC59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28F22CD22F56440300A0FC59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		28F22CCE2F56440300A0FC59 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 28F22CBE2F56440300A0FC59 /* tiptour-macos */;
+			targetProxy = 28F22CCD2F56440300A0FC59 /* PBXContainerItemProxy */;
+		};
+		28F22CD82F56440300A0FC59 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 28F22CBE2F56440300A0FC59 /* tiptour-macos */;
+			targetProxy = 28F22CD72F56440300A0FC59 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		28F22CDE2F56440300A0FC59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6D7X9GGZAW;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		28F22CDF2F56440300A0FC59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6D7X9GGZAW;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		28F22CE12F56440300A0FC59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TipTour/TipTour.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TipTour/Info.plist;
+				INFOPLIST_KEY_AnthropicAPIURL = "https://api.anthropic.com/v1/messages";
+				INFOPLIST_KEY_AnthropicModel = "claude-sonnet-4-6";
+				INFOPLIST_KEY_CFBundleDisplayName = TipTour;
+				INFOPLIST_KEY_CFBundleName = TipTour;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TipTour uses Apple Events to control other apps on your behalf - opening URLs in Chrome and Safari, sending iMessages, organizing Finder, and other agent-driven workflows. You will be asked to allow each target app individually the first time TipTour tries to drive it.";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "TipTour agents may read your Music library when you ask them to find tracks or build playlists.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TipTour agents may interact with Bluetooth devices when you ask them to manage connections or read sensor data.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "TipTour agents may read or modify your full calendar when you ask them to schedule, reschedule, or analyze events.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "TipTour agents may read or create calendar events when you ask them to schedule meetings or summarize your day.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "TipTour can use the camera when an agent needs visual context.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "TipTour agents may read your Contacts when you ask them to look up phone numbers, email addresses, or send messages to specific people.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "TipTour agents may save files to your Desktop when you ask them to create documents or download research.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "TipTour agents may read or write files in your Documents folder when you ask them to organize, create, or summarize documents.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "TipTour agents may read or save files in your Downloads folder when handling research artifacts.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "TipTour may connect to local services on your network - for example, the Chrome DevTools Protocol on 127.0.0.1, or local MCP servers.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "TipTour agents may use your approximate location when you ask them about local services, weather, or directions.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TipTour agents may use your approximate location when you ask them about local services, weather, or directions.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "TipTour uses your microphone so you can talk to it.";
+				INFOPLIST_KEY_NSNetworkVolumesUsageDescription = "TipTour agents may access network-mounted volumes when you ask them to work with shared drives.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "TipTour agents may add images to your Photos library when you ask them to save generated or downloaded artwork.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "TipTour agents may browse your Photos when you ask them to find or describe images.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "TipTour agents may read or modify all of your reminders when you ask them to organize, complete, or analyze your task lists.";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "TipTour agents may read or create reminders when you ask them to add tasks or summarize your to-do lists.";
+				INFOPLIST_KEY_NSRemovableVolumesUsageDescription = "TipTour agents may access connected drives when you ask them to organize or copy files.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TipTour needs screen recording access to see your screen and help you.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "TipTour may use on-device speech recognition for fallback transcription when the cloud voice service is unavailable.";
+				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "TipTour uses System Events to script the macOS UI - typing keystrokes, clicking menu items, and reading window state - on behalf of your background agents.";
+				INFOPLIST_KEY_SUFeedURL = "https://github.com/milind-soni/tiptour-releases/raw/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "KNj1qMm+aKDZsv53kbgiy9Kn5aQfuGuU4EcKb+54szw=";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
+				PRODUCT_NAME = TipTour;
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		28F22CE22F56440300A0FC59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TipTour/TipTour.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TipTour/Info.plist;
+				INFOPLIST_KEY_AnthropicAPIURL = "https://api.anthropic.com/v1/messages";
+				INFOPLIST_KEY_AnthropicModel = "claude-sonnet-4-6";
+				INFOPLIST_KEY_CFBundleDisplayName = TipTour;
+				INFOPLIST_KEY_CFBundleName = TipTour;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TipTour uses Apple Events to control other apps on your behalf - opening URLs in Chrome and Safari, sending iMessages, organizing Finder, and other agent-driven workflows. You will be asked to allow each target app individually the first time TipTour tries to drive it.";
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "TipTour agents may read your Music library when you ask them to find tracks or build playlists.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TipTour agents may interact with Bluetooth devices when you ask them to manage connections or read sensor data.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "TipTour agents may read or modify your full calendar when you ask them to schedule, reschedule, or analyze events.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "TipTour agents may read or create calendar events when you ask them to schedule meetings or summarize your day.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "TipTour can use the camera when an agent needs visual context.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "TipTour agents may read your Contacts when you ask them to look up phone numbers, email addresses, or send messages to specific people.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "TipTour agents may save files to your Desktop when you ask them to create documents or download research.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "TipTour agents may read or write files in your Documents folder when you ask them to organize, create, or summarize documents.";
+				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "TipTour agents may read or save files in your Downloads folder when handling research artifacts.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "TipTour may connect to local services on your network - for example, the Chrome DevTools Protocol on 127.0.0.1, or local MCP servers.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "TipTour agents may use your approximate location when you ask them about local services, weather, or directions.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TipTour agents may use your approximate location when you ask them about local services, weather, or directions.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "TipTour uses your microphone so you can talk to it.";
+				INFOPLIST_KEY_NSNetworkVolumesUsageDescription = "TipTour agents may access network-mounted volumes when you ask them to work with shared drives.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "TipTour agents may add images to your Photos library when you ask them to save generated or downloaded artwork.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "TipTour agents may browse your Photos when you ask them to find or describe images.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "TipTour agents may read or modify all of your reminders when you ask them to organize, complete, or analyze your task lists.";
+				INFOPLIST_KEY_NSRemindersUsageDescription = "TipTour agents may read or create reminders when you ask them to add tasks or summarize your to-do lists.";
+				INFOPLIST_KEY_NSRemovableVolumesUsageDescription = "TipTour agents may access connected drives when you ask them to organize or copy files.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TipTour needs screen recording access to see your screen and help you.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "TipTour may use on-device speech recognition for fallback transcription when the cloud voice service is unavailable.";
+				INFOPLIST_KEY_NSSystemAdministrationUsageDescription = "TipTour uses System Events to script the macOS UI - typing keystrokes, clicking menu items, and reading window state - on behalf of your background agents.";
+				INFOPLIST_KEY_SUFeedURL = "https://github.com/milind-soni/tiptour-releases/raw/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "KNj1qMm+aKDZsv53kbgiy9Kn5aQfuGuU4EcKb+54szw=";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
+				PRODUCT_NAME = TipTour;
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		28F22CE42F56440300A0FC59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TipTour.app/Contents/MacOS/TipTour";
+			};
+			name = Debug;
+		};
+		28F22CE52F56440300A0FC59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tiptour-macos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tiptour-macos";
+			};
+			name = Release;
+		};
+		28F22CE72F56440300A0FC59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = TipTour;
+			};
+			name = Debug;
+		};
+		28F22CE82F56440300A0FC59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = QF8C5BK8WW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = TipTour;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		28F22CBA2F56440300A0FC59 /* Build configuration list for PBXProject "tiptour-macos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28F22CDE2F56440300A0FC59 /* Debug */,
+				28F22CDF2F56440300A0FC59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28F22CE02F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28F22CE12F56440300A0FC59 /* Debug */,
+				28F22CE22F56440300A0FC59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28F22CE32F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macosTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28F22CE42F56440300A0FC59 /* Debug */,
+				28F22CE52F56440300A0FC59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28F22CE62F56440300A0FC59 /* Build configuration list for PBXNativeTarget "tiptour-macosUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28F22CE72F56440300A0FC59 /* Debug */,
+				28F22CE82F56440300A0FC59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA00BB012F6500010039DA55 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.0;
+			};
+		};
+		AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA00BB022F6500020039DA55 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00BB012F6500010039DA55 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		AA00BB052F6500050039DA55 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00BB042F6500040039DA55 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 28F22CB72F56440300A0FC59 /* Project object */;
+}

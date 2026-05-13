@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TipTour uses your microphone so you can talk to it.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>TipTour needs screen recording access to see what's on your screen and point at the right elements.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>TipTour uses Apple Events to control other apps on your behalf — opening URLs in Chrome and Safari, sending iMessages, organizing Finder, scripting Numbers/Pages/Keynote, and other agent-driven workflows. You'll be asked to allow each target app individually the first time TipTour tries to drive it.</string>
+	<key>NSSystemAdministrationUsageDescription</key>
+	<string>TipTour uses System Events to script the macOS UI — typing keystrokes, clicking menu items, and reading window state — on behalf of your background agents.</string>
+
+	<!-- Camera / video capture -->
+	<key>NSCameraUsageDescription</key>
+	<string>TipTour can use the camera when an agent needs visual context (e.g. when you point a webcam at a document for the agent to read).</string>
+
+	<!-- File-system scopes (TCC-controlled even for non-sandboxed apps) -->
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>TipTour agents may save files to your Desktop when you ask them to create documents or download research.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>TipTour agents may read or write files in your Documents folder when you ask them to organize, create, or summarize documents.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>TipTour agents may read or save files in your Downloads folder when handling research artifacts.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>TipTour agents may access connected drives when you ask them to organize or copy files to or from external storage.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>TipTour agents may access network-mounted volumes when you ask them to work with shared drives or remote storage.</string>
+
+	<!-- Personal-information stores (used via AppleScript / EventKit) -->
+	<key>NSContactsUsageDescription</key>
+	<string>TipTour agents may read your Contacts when you ask them to look up phone numbers, email addresses, or send messages to specific people.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>TipTour agents may read or create calendar events when you ask them to schedule meetings or summarize your day.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>TipTour agents may read or modify your full calendar when you ask them to schedule, reschedule, or analyze events.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>TipTour agents may read or create reminders when you ask them to add tasks or summarize your to-do lists.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>TipTour agents may read or modify all of your reminders when you ask them to organize, complete, or analyze your task lists.</string>
+
+	<!-- Media -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TipTour agents may browse your Photos when you ask them to find or describe images.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>TipTour agents may add images to your Photos library when you ask them to save generated or downloaded artwork.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>TipTour agents may read your Music library when you ask them to find tracks or build playlists.</string>
+
+	<!-- Location & sensors (used by agents that need geo context) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TipTour agents may use your approximate location when you ask them about local services, weather, or directions.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>TipTour agents may use your approximate location when you ask them about local services, weather, or directions.</string>
+
+	<!-- Speech recognition (some agent flows transcribe local audio) -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>TipTour may use on-device speech recognition for fallback transcription when the cloud voice service is unavailable.</string>
+
+	<!-- Local network (used by Cloudflare Worker proxy + future MCP / DevTools control) -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TipTour may connect to local services on your network — for example, the Chrome DevTools Protocol on 127.0.0.1, or local MCP servers — when agents drive a local browser or developer tool.</string>
+
+	<!-- Bluetooth (rare — included for agents that pair / list devices) -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>TipTour agents may interact with Bluetooth devices when you ask them to manage connections or read sensor data.</string>
+</dict>
+</plist>

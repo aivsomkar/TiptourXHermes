@@ -1,0 +1,131 @@
+//
+//  TipTourApp.swift
+//  TipTour
+//
+//  Menu bar-only companion app. No dock icon, no main window — just an
+//  always-available status item in the macOS menu bar. Clicking the icon
+//  opens a floating panel with companion voice controls.
+//
+
+import AVFoundation
+import ServiceManagement
+import SwiftUI
+import Sparkle
+
+@main
+struct TipTourApp: App {
+    @NSApplicationDelegateAdaptor(CompanionAppDelegate.self) var appDelegate
+
+    var body: some Scene {
+        // The app lives entirely in the menu bar panel managed by the AppDelegate.
+        // This empty Settings scene satisfies SwiftUI's requirement for at least
+        // one scene but is never shown (LSUIElement=true removes the app menu).
+        Settings {
+            EmptyView()
+        }
+    }
+}
+
+/// Manages the companion lifecycle: creates the menu bar panel and starts
+/// the companion voice pipeline on launch.
+@MainActor
+final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
+    private var menuBarPanelManager: MenuBarPanelManager?
+    private var agentOverlayWindowController: AgentOverlayWindowController?
+    private let companionManager = CompanionManager()
+    private var sparkleUpdaterController: SPUStandardUpdaterController?
+    /// Held as a stored property so the player isn't deallocated mid-playback.
+    private var launchSoundPlayer: AVAudioPlayer?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        print("🎯 TipTour: Starting...")
+        print("🎯 TipTour: Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown")")
+
+        UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 0])
+
+        playLaunchSound()
+
+        TipTourAnalytics.configure()
+        TipTourAnalytics.trackAppOpened()
+
+        menuBarPanelManager = MenuBarPanelManager(companionManager: companionManager)
+        agentOverlayWindowController = AgentOverlayWindowController.shared
+        companionManager.start()
+        // Auto-open the panel if the user still needs to do something:
+        // either they haven't onboarded yet, or permissions were revoked.
+        if !companionManager.hasCompletedOnboarding || !companionManager.allPermissionsGranted {
+            menuBarPanelManager?.showPanelOnLaunch()
+        }
+        registerAsLoginItemIfNeeded()
+        // Sparkle auto-update — only kicks in once SUFeedURL and
+        // SUPublicEDKey are populated in Info.plist (via the
+        // INFOPLIST_KEY_* settings in the project's build settings).
+        // Until then this is a no-op so debug builds don't error.
+        startSparkleUpdater()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        companionManager.stop()
+    }
+
+    /// Registers the app as a login item so it launches automatically on
+    /// startup. Uses SMAppService which shows the app in System Settings >
+    /// General > Login Items, letting the user toggle it off if they want.
+    private func registerAsLoginItemIfNeeded() {
+        let loginItemService = SMAppService.mainApp
+        if loginItemService.status != .enabled {
+            do {
+                try loginItemService.register()
+                print("🎯 TipTour: Registered as login item")
+            } catch {
+                print("⚠️ TipTour: Failed to register as login item: \(error)")
+            }
+        }
+    }
+
+    /// Plays the Iron Man repulsor sound effect on every app launch, in sync
+    /// with the Arc Reactor boot animation. Bundled as a loose resource at
+    /// TipTour/ironman-repulsors.mp3.
+    private func playLaunchSound() {
+        guard let soundURL = Bundle.main.url(forResource: "ironman-repulsors", withExtension: "mp3") else {
+            print("⚠️ TipTour: ironman-repulsors.mp3 not found in bundle")
+            return
+        }
+        do {
+            let player = try AVAudioPlayer(contentsOf: soundURL)
+            player.prepareToPlay()
+            player.play()
+            launchSoundPlayer = player
+        } catch {
+            print("⚠️ TipTour: Failed to play launch sound: \(error)")
+        }
+    }
+
+    private func startSparkleUpdater() {
+        // Sparkle reads SUFeedURL + SUPublicEDKey from the bundle's
+        // Info.plist. If they're missing (e.g. local dev build before
+        // Sparkle keys are configured), starting the updater would
+        // throw — short-circuit so debug builds run cleanly.
+        let infoDict = Bundle.main.infoDictionary
+        let hasFeedURL = (infoDict?["SUFeedURL"] as? String)?.isEmpty == false
+        let hasPublicKey = (infoDict?["SUPublicEDKey"] as? String)?.isEmpty == false
+        guard hasFeedURL && hasPublicKey else {
+            print("⚠️ TipTour: Sparkle updater skipped — SUFeedURL or SUPublicEDKey not set in Info.plist (this is fine for local debug builds)")
+            return
+        }
+
+        let updaterController = SPUStandardUpdaterController(
+            startingUpdater: false,
+            updaterDelegate: nil,
+            userDriverDelegate: nil
+        )
+        self.sparkleUpdaterController = updaterController
+
+        do {
+            try updaterController.updater.start()
+            print("🎯 TipTour: Sparkle updater started")
+        } catch {
+            print("⚠️ TipTour: Sparkle updater failed to start: \(error)")
+        }
+    }
+}
