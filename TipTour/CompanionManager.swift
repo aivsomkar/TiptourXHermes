@@ -49,21 +49,8 @@ final class CompanionManager: ObservableObject {
     /// Whether the blue cursor overlay is currently visible on screen.
     @Published private(set) var isOverlayVisible: Bool = false
 
-    // MARK: - Skill Demonstration (Phase 4C)
-
-    @Published var isDemonstratingSkill: Bool = false
-    @Published var pendingTrajectory: ActionTrajectory? = nil
-    @Published var isExtractingSkill: Bool = false
-    @Published var skillExtractionError: String? = nil
-
-    private let demonstrationRecorder = DemonstrationRecorder()
-
-    // Injected in tests to avoid hitting the live SkillExtractor.
-    var skillExtractorOverrideForTests: SkillExtractor? = nil
-
-    private var effectiveSkillExtractor: SkillExtractor {
-        skillExtractorOverrideForTests ?? .shared
-    }
+    // MARK: - Skill Demonstration (removed — to be re-routed through HermesClient)
+    // TODO(plan-2): re-introduce demonstration recording via HermesClient if needed.
 
     let globalPushToTalkShortcutMonitor = GlobalPushToTalkShortcutMonitor()
     let overlayWindowManager = OverlayWindowManager()
@@ -91,8 +78,7 @@ final class CompanionManager: ObservableObject {
     /// transition cue interrupts any previous one rather than overlapping.
     private var voiceStateSoundPlayer: AVAudioPlayer?
 
-    private let agentSwarmManager = AgentSwarmManager.shared
-    private var agentMessageSubscription: AnyCancellable?
+    // TODO(plan-2): route background-agent state through HermesClient.
     private var pendingAgentCompletionNotices: [String] = []
 
     /// True when all four required permissions (accessibility, screen recording,
@@ -129,29 +115,15 @@ final class CompanionManager: ObservableObject {
                 screenshotJPEG: screenshotJPEG
             ) ?? ["ok": false]
         }
-        backend.onSubmitWorkflowPlan = { [weak self] id, goal, app, steps in
-            await self?.handleToolSubmitWorkflowPlan(id: id, goal: goal, app: app, steps: steps) ?? ["ok": false]
+        // TODO(plan-2): route workflow submission through HermesClient.
+        backend.onSubmitWorkflowPlan = { id, goal, app, steps in
+            _ = (id, goal, app, steps)
+            return ["ok": false]
         }
-        backend.onSpawnBackgroundTask = { [weak self] task, taskType in
-            let spawnedAgent = await self?.spawnBackgroundAgent(
-                taskDescription: task,
-                taskTypeRaw: taskType
-            )
-            if spawnedAgent != nil {
-                return [
-                    "ok": true,
-                    "message": "Background task started. I'll let you know when it's done."
-                ]
-            }
-            // Swarm refused the spawn — most commonly because it's at
-            // the max-concurrent-agents cap. Tell Gemini the truth so
-            // it can pick a different strategy instead of telling the
-            // user "got it" while nothing runs.
-            return [
-                "ok": false,
-                "error": "swarm_at_capacity",
-                "message": "Couldn't start the background task — too many agents are already running. Wait for one to finish or ask the user to dismiss some, then try again."
-            ]
+        // TODO(plan-2): route background-task spawn through HermesClient.
+        backend.onSpawnBackgroundTask = { task, taskType in
+            _ = (task, taskType)
+            return ["ok": false]
         }
         backend.onInputTranscriptUpdate = { [weak self] fullInputTranscript in
             guard let self else { return }
@@ -275,12 +247,7 @@ final class CompanionManager: ObservableObject {
         }
         handledToolCallIDsThisUtterance.insert(id)
 
-        // A point_at_element call means the user is asking about a single
-        // visible element — supersede any abandoned multi-step plan.
-        if let activePlan = WorkflowRunner.shared.activePlan {
-            print("[Tool] 🔄 superseding active plan \"\(activePlan.goal)\" — user asked for a single element \"\(label)\"")
-            WorkflowRunner.shared.stop()
-        }
+        // TODO(plan-2): re-implement workflow short-circuit via HermesClient session state.
         let capture = voiceBackend.latestCapture
         let hintInScreenshotPixels = pixelHintFromBox2D(
             box2DNormalized: box2DNormalized,
@@ -353,151 +320,6 @@ final class CompanionManager: ObservableObject {
         }
     }
 
-    /// Handle the `submit_workflow_plan` tool call. Gemini produces the
-    /// plan itself via its own vision + reasoning; this just converts the
-    /// raw tool args into a WorkflowPlan and kicks off the runner.
-    @MainActor
-    private func handleToolSubmitWorkflowPlan(id: String, goal: String, app: String, steps: [[String: Any]]) async -> [String: Any] {
-        if handledToolCallIDsThisUtterance.contains(id) {
-            print("[Tool] ⏭️  ignoring duplicate submit_workflow_plan id=\(id)")
-            return ["ok": true, "duplicate": true]
-        }
-        handledToolCallIDsThisUtterance.insert(id)
-
-        if let activePlan = WorkflowRunner.shared.activePlan {
-            let isSameGoalAsActivePlan = activePlan.goal.caseInsensitiveCompare(goal) == .orderedSame
-            if isSameGoalAsActivePlan {
-                print("[Tool] ⏭️  rejecting submit_workflow_plan — same-goal re-submit of \"\(activePlan.goal)\" (already on step \(WorkflowRunner.shared.activeStepIndex + 1)/\(activePlan.steps.count))")
-                return [
-                    "ok": false,
-                    "reason": "plan_already_running",
-                    "message": "This exact plan is already executing on the user's machine. The user reads at human speed; an unchanged screenshot is normal. Do not re-submit this plan. Stay silent and wait for the user to speak again."
-                ]
-            }
-            print("[Tool] 🔄 superseding active plan \"\(activePlan.goal)\" with new request \"\(goal)\"")
-            WorkflowRunner.shared.stop()
-        }
-
-        print("[Tool] 🔧 submit_workflow_plan(goal=\"\(goal)\", app=\"\(app)\", \(steps.count) steps)")
-
-        let captureForBoxConversion = voiceBackend.latestCapture
-        let parsedSteps: [WorkflowStep] = steps.enumerated().map { index, raw in
-            let label = raw["label"] as? String
-            let hint = raw["hint"] as? String ?? ""
-
-            // Convert Gemini's box_2d ([y1, x1, y2, x2] in [0, 1000]) to
-            // the box's center in screenshot-pixel space. The resolver's
-            // box_2d-fallback tier expects pixel coords.
-            let box2DNormalized = (raw["box_2d"] as? [Int]).flatMap { $0.count == 4 ? $0 : nil }
-            let pixelCenter = pixelHintFromBox2D(
-                box2DNormalized: box2DNormalized,
-                capture: captureForBoxConversion
-            )
-            let hintX = pixelCenter.map { Int($0.x) }
-            let hintY = pixelCenter.map { Int($0.y) }
-
-            return WorkflowStep(
-                id: "step_\(index + 1)",
-                type: .click,
-                label: label,
-                hint: hint,
-                hintX: hintX,
-                hintY: hintY,
-                screenNumber: nil
-            )
-        }
-
-        guard !parsedSteps.isEmpty else {
-            print("[Tool] ✗ submit_workflow_plan — zero steps")
-            return ["ok": false, "reason": "empty_steps"]
-        }
-
-        let plan = WorkflowPlan(
-            goal: goal,
-            app: app.isEmpty ? nil : app,
-            steps: parsedSteps
-        )
-        let stepLabels = parsedSteps.map { $0.label ?? "<unlabeled>" }
-        print("[Tool] ✓ submit_workflow_plan → \(plan.app ?? "?"): \(stepLabels)")
-        startWorkflowPlan(plan)
-
-        voiceBackend.suppressScreenshotsUntilUserSpeaks()
-
-        // Pause mic + screenshots so Gemini can narrate the plan in one
-        // uninterrupted turn. Once narration finishes, exit narration mode
-        // — mic/screenshots resume but the WebSocket stays open.
-        print("[Workflow] entering Gemini narration mode — mic/screenshots paused, socket kept alive for narration")
-        voiceBackend.enterNarrationMode()
-        scheduleExitNarrationModeAfterSpeechEnds()
-
-        return [
-            "ok": true,
-            "accepted_steps": stepLabels.count
-        ]
-    }
-
-    /// Wait for Gemini's post-tool narration turn to finish, then exit
-    /// narration mode so mic + periodic screenshots resume. Session stays
-    /// open for conversational follow-ups.
-    private func scheduleExitNarrationModeAfterSpeechEnds() {
-        // OpenAI Realtime regularly takes 3-5s for post-tool-call audio
-        // to start arriving (TTFT after function_call_output → response.create).
-        // Gemini Live is closer to 1-2s. Use 6s so neither backend's
-        // narration is cut off before it can start.
-        let silentNarrationGraceSeconds: TimeInterval = 6.0
-        let quietConfirmationSeconds: TimeInterval = 0.8
-        let maxTotalWaitSeconds: TimeInterval = 15.0
-
-        Task { [weak self] in
-            guard let self = self else { return }
-
-            let startedAt = Date()
-            let maxDeadline = startedAt.addingTimeInterval(maxTotalWaitSeconds)
-            var hasObservedSpeechStart = false
-            var quietSinceTimestamp: Date?
-
-            while Date() < maxDeadline {
-                try? await Task.sleep(nanoseconds: 200_000_000)
-
-                let (isActive, speaking, playing) = await MainActor.run { () -> (Bool, Bool, Bool) in
-                    (
-                        self.voiceBackend.isActive,
-                        self.voiceBackend.isModelSpeaking,
-                        self.voiceBackend.isAudioPlaying
-                    )
-                }
-                if !isActive { return }
-
-                let currentlySpeaking = speaking || playing
-                if currentlySpeaking {
-                    hasObservedSpeechStart = true
-                    quietSinceTimestamp = nil
-                    continue
-                }
-
-                if !hasObservedSpeechStart,
-                   Date().timeIntervalSince(startedAt) >= silentNarrationGraceSeconds {
-                    break
-                }
-
-                if hasObservedSpeechStart {
-                    if quietSinceTimestamp == nil {
-                        quietSinceTimestamp = Date()
-                    } else if let quietStart = quietSinceTimestamp,
-                              Date().timeIntervalSince(quietStart) >= quietConfirmationSeconds {
-                        break
-                    }
-                }
-            }
-
-            await MainActor.run {
-                guard self.voiceBackend.isActive else { return }
-                print("[Workflow] narration window closed — exiting narration mode, session stays alive for follow-ups")
-                self.voiceBackend.exitNarrationMode()
-            }
-        }
-    }
-
     /// Set of tool-call IDs we've already dispatched within the current
     /// user utterance. Reset when a new user utterance starts.
     private var handledToolCallIDsThisUtterance: Set<String> = []
@@ -540,11 +362,9 @@ final class CompanionManager: ObservableObject {
     /// users don't have to flip it every launch, but the menu bar
     /// panel exposes it prominently so it's never hidden.
     ///
-    /// Safety net: `WorkflowRunner` already pauses when the user
-    /// Cmd-Tabs to an unrelated app, when a modal dialog appears, and
-    /// when the post-click AX fingerprint didn't change. Pressing the
-    /// hotkey closes the Gemini Live session and stops anything in
-    /// flight. Autopilot rides those rails — it doesn't bypass them.
+    /// Pressing the hotkey closes the Gemini Live session and stops
+    /// anything in flight. Autopilot rides those rails — it doesn't
+    /// bypass them.
     @Published var isAutopilotEnabled: Bool = UserDefaults.standard.bool(forKey: "isAutopilotEnabled")
 
     func setAutopilotEnabled(_ enabled: Bool) {
@@ -648,38 +468,8 @@ final class CompanionManager: ObservableObject {
         beginTrackingUserTargetApp()
         ClickDetector.advanceOnAnyClickEnabled = advanceOnAnyClickEnabled
 
-        // Wire the autopilot toggle into the workflow runner. The
-        // runner reads this on every step to decide whether to fly the
-        // cursor and wait (teaching) or fly the cursor and click
-        // (autopilot).
-        WorkflowRunner.shared.isAutopilotEnabledProvider = { [weak self] in
-            self?.isAutopilotEnabled ?? false
-        }
-
-        agentMessageSubscription = agentSwarmManager.messageBus
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] message in
-                Task { @MainActor [weak self] in
-                    await self?.handleAgentSwarmMessage(message)
-                }
-            }
-
-        Task {
-            await LLMProviderRegistry.shared.bootstrapFromKeychain()
-        }
-
-        // Seed the skill library with the bundled RuFlo + OpenWork
-        // markdown skills (~150 prompts covering SPARC, DDD, GitHub
-        // workflows, security audit, OpenCode primitives, etc.).
-        // Idempotent: on every launch the seeder checks slug
-        // existence and only writes missing skills, so user
-        // customizations to bundled skills are preserved.
-        Task {
-            await BundledSkillSeeder.seedBundledSkillsIfNeeded()
-        }
-
-        // Prune any memory entries that expired since the last launch.
-        Task { await AgentMemoryStore.shared.pruneExpired() }
+        // TODO(plan-2): re-wire autopilot toggle, background-agent stream,
+        // and provider/skill/memory bootstrap through HermesClient.
 
         // If the user already completed onboarding AND all permissions are
         // still granted, show the cursor overlay immediately. If permissions
@@ -689,58 +479,6 @@ final class CompanionManager: ObservableObject {
             overlayWindowManager.hasShownOverlayBefore = true
             overlayWindowManager.showOverlay(onScreens: NSScreen.screens, companionManager: self)
             isOverlayVisible = true
-        }
-    }
-
-    @MainActor
-    private func handleAgentSwarmMessage(_ message: AgentMessage) async {
-        guard case .main = message.to else { return }
-
-        switch message.type {
-        case .taskComplete(let result):
-            let notice: String
-            switch result {
-            case .success(let summary, _):
-                notice = "A background task finished: \(summary)"
-            case .failure(let reason):
-                notice = "A background task failed: \(reason)"
-            case .partial(let completedSummary, _):
-                notice = "Task partially done: \(completedSummary)"
-            }
-            deliverAgentNoticeToVoiceSession(notice)
-
-        case .taskFailed(let reason):
-            // Subagent → main-agent error channel. Previously this
-            // case fell into `default: break` and the failure was
-            // invisible to the user — the agent's error state showed
-            // in the overlay but no voice notice fired and the next
-            // Gemini Live session got no context about what went wrong.
-            // Now we route failures through the same delivery path as
-            // .taskComplete so the user hears about them.
-            deliverAgentNoticeToVoiceSession(
-                "A background agent failed: \(reason). The agent's step history in the overlay has the details — open it if the user asks what went wrong."
-            )
-            print("[CompanionManager] ❌ background agent reported failure: \(reason)")
-
-        case .blockerRaised(let blocker):
-            deliverAgentNoticeToVoiceSession(
-                "One of your background agents needs help: \(blocker.description). Options: \(blocker.possibleResolutions.joined(separator: ", "))"
-            )
-
-        case .progressUpdate(let stepDescription, _):
-            // Don't pipe every step to the voice session (would spam
-            // Gemini) but do log them so we can debug "why did agent
-            // X stall" from the console.
-            print("[CompanionManager] agent progress: \(stepDescription)")
-
-        case .interrupt, .blockerResolved, .chatMessage, .statusQuery, .statusResponse, .spawnRequest:
-            // These are agent-to-agent / agent-to-swarm directives —
-            // not user-facing notices, so we don't surface them.
-            // Listed explicitly (instead of falling through to a
-            // default) so the compiler warns us if a new
-            // AgentMessageType case is added later and we need to
-            // decide whether the user should hear about it.
-            break
         }
     }
 
@@ -776,57 +514,8 @@ final class CompanionManager: ObservableObject {
         print("[CompanionManager] forwarded live agent notice into active voice session")
     }
 
-    /// Spawn a background agent. Returns nil when the swarm is at
-    /// capacity (or refuses for any other reason) so callers can tell
-    /// Gemini the truth instead of fabricating a "got it, on it" reply.
-    @discardableResult
-    func spawnBackgroundAgent(taskDescription: String, taskTypeRaw: String) async -> TaskAgent? {
-        let taskType = TaskType(rawValue: taskTypeRaw) ?? .generalMac
-        return await agentSwarmManager.spawn(
-            taskDescription: taskDescription,
-            taskType: taskType
-        )
-    }
-
-    // MARK: - Skill Demonstration
-
-    func startDemonstration() {
-        isDemonstratingSkill = true
-        demonstrationRecorder.start()
-    }
-
-    func stopDemonstration() {
-        let trajectory = demonstrationRecorder.stop()
-        pendingTrajectory = trajectory
-        isDemonstratingSkill = false
-    }
-
-    func saveSkill(name: String) async {
-        guard let trajectory = pendingTrajectory else { return }
-        isExtractingSkill = true
-        skillExtractionError = nil
-        do {
-            let body = try await effectiveSkillExtractor.extract(trajectory: trajectory, name: name)
-            let slug = SkillLibraryStore.generateSlug(from: name)
-            await SkillLibraryStore.shared.write(
-                slug: slug,
-                name: name,
-                description: String(body.prefix(120)),
-                taskTypes: [.generalMac],
-                body: body
-            )
-            pendingTrajectory = nil
-            isExtractingSkill = false
-        } catch {
-            skillExtractionError = error.localizedDescription
-            isExtractingSkill = false
-        }
-    }
-
-    func discardDemonstration() {
-        pendingTrajectory = nil
-        skillExtractionError = nil
-    }
+    // TODO(plan-2): re-introduce background-agent spawn and skill
+    // demonstration capture via HermesClient.
 
     func stop() {
         globalPushToTalkShortcutMonitor.stop()
@@ -935,17 +624,9 @@ final class CompanionManager: ObservableObject {
                 self?.handleShortcutTransition(transition)
             }
 
-        demonstrationShortcutCancellable = globalPushToTalkShortcutMonitor
-            .demonstrationShortcutPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                guard let self else { return }
-                if self.isDemonstratingSkill {
-                    self.stopDemonstration()
-                } else {
-                    self.startDemonstration()
-                }
-            }
+        // TODO(plan-2): re-wire demonstration shortcut once the
+        // skill capture path is reintroduced via HermesClient.
+        _ = globalPushToTalkShortcutMonitor.demonstrationShortcutPublisher
     }
 
     /// Watch NSWorkspace for app-activation events and continuously remember
@@ -1294,17 +975,7 @@ final class CompanionManager: ObservableObject {
 
     // MARK: - Gemini Live Mode
 
-    /// Execute a workflow plan emitted by Gemini.
-    private func startWorkflowPlan(_ plan: WorkflowPlan) {
-        print("[Workflow] received plan from LLM: \"\(plan.goal)\" (\(plan.steps.count) steps)")
-        WorkflowRunner.shared.start(
-            plan: plan,
-            pointHandler: { [weak self] resolution in
-                self?.pointAtResolution(resolution)
-            },
-            latestCapture: voiceBackend.latestCapture
-        )
-    }
+    // TODO(plan-2): workflow execution now routes through HermesClient.
 
     /// Start a Gemini Live session on hotkey press. Two things run in
     /// parallel from the instant the hotkey fires:
@@ -1328,15 +999,9 @@ final class CompanionManager: ObservableObject {
         Task {
             do {
                 try await voiceBackend.start(initialScreenshot: nil)
-                // Two streams of stale agent context need to land in the
-                // new session BEFORE the user speaks:
-                //   1. Notices that piled up while no session was open
-                //      (agents completed/failed/blocked between sessions).
-                //   2. Status of agents that are still running.
-                // We drain the notice queue first so Gemini has the
-                // narrative arc — what finished, then what's still cooking.
+                // TODO(plan-2): re-inject pending background-agent
+                // notices and live status via HermesClient.
                 await injectPendingAgentCompletionNoticesIfNeeded()
-                await injectBackgroundAgentStatusIfNeeded()
             } catch {
                 print("[GeminiLive] Failed to start session: \(error.localizedDescription)")
             }
@@ -1365,29 +1030,8 @@ final class CompanionManager: ObservableObject {
         print("[CompanionManager] Drained \(notices.count) pending agent notice(s) into new session")
     }
 
-    /// Reads active agent statuses from AgentSwarmManager and sends a compact
-    /// summary as a text turn so Gemini has context about in-flight background
-    /// tasks when the voice session resumes. Skips silently when no agents are running.
-    private func injectBackgroundAgentStatusIfNeeded() async {
-        let allStatuses = await AgentSwarmManager.shared.allStatuses()
-        let activeStatuses = allStatuses.filter { status in
-            if case .terminated = status.state { return false }
-            if case .completed  = status.state { return false }
-            return true
-        }
-        guard !activeStatuses.isEmpty else { return }
-
-        let lines = activeStatuses.map { status in
-            "• \(status.agentName) [\(status.state.displayLabel)]: \(status.taskSummary)"
-        }
-        let contextMessage = """
-            Background agent status (from previous session):
-            \(lines.joined(separator: "\n"))
-            You can report on these agents if the user asks.
-            """
-        voiceBackend.sendText(contextMessage)
-        print("[CompanionManager] Injected \(activeStatuses.count) background agent status(es) into new session")
-    }
+    // TODO(plan-2): re-introduce live background-agent status injection
+    // via HermesClient.
 
     /// Walk the user's target app AX tree to prime caches so the first
     /// `point_at_element` resolves against warm data. The set-of-marks
@@ -1410,7 +1054,7 @@ final class CompanionManager: ObservableObject {
 
     /// End the Gemini Live session.
     func stopVoiceSession() {
-        WorkflowRunner.shared.stop()
+        // TODO(plan-2): tell HermesClient to abandon any in-flight plan.
         voiceBackend.stop()
     }
 }

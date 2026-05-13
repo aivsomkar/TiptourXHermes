@@ -4,13 +4,13 @@
 //
 //  Listens for global left-mouse-down events and fires a callback if
 //  the click lands inside (or within a small tolerance of) the currently
-//  armed target. Used by WorkflowRunner to auto-advance the workflow
-//  checklist when the user clicks the element the cursor is pointing at.
+//  armed target. (TODO(plan-2): the workflow checklist auto-advance flow
+//  that drove arm/disarm now lives behind HermesClient.)
 //
 //  Deliberately minimal:
 //    • One armed target at a time (replaces the previous one).
 //    • Listen-only CGEvent tap — never blocks or modifies the click.
-//    • Single source of truth: WorkflowRunner owns when to arm/disarm.
+//    • Single source of truth: the workflow driver owns when to arm/disarm.
 //    • Prefers a real AX-frame rect when we have one (tight fit around
 //      the element) and falls back to a 40pt radius around the point
 //      when we don't (YOLO/LLM-only resolutions).
@@ -67,7 +67,8 @@ final class ClickDetector {
     private var lastSuccessfulHitTimestamp: Date?
 
     /// Fired on the main actor when a click lands within tolerance of
-    /// the armed target. WorkflowRunner sets this to its advance routine.
+    /// the armed target. The workflow driver sets this to its advance
+    /// routine. (TODO(plan-2): driver now belongs to HermesClient.)
     private var onTargetClicked: (@MainActor () -> Void)?
 
     private var eventTap: CFMachPort?

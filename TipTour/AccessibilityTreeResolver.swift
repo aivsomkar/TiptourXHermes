@@ -398,11 +398,10 @@ final class AccessibilityTreeResolver: @unchecked Sendable {
         return (nil, nil)
     }
 
-    /// Public instance forwarder so callers outside this file (like
-    /// WorkflowRunner's modal-dialog detector and AX fingerprint
-    /// helper) can resolve a hint string to an NSRunningApplication
-    /// with the same logic the resolver uses internally. Keeps the
-    /// app-finding heuristic in one place.
+    /// Public instance forwarder so callers outside this file can
+    /// resolve a hint string to an NSRunningApplication with the same
+    /// logic the resolver uses internally. Keeps the app-finding
+    /// heuristic in one place.
     func runningAppMatching(hint: String) -> NSRunningApplication? {
         Self.findRunningApp(matching: hint)
     }

@@ -12,7 +12,7 @@ import SwiftUI
 
 struct CompanionPanelView: View {
     @ObservedObject var companionManager: CompanionManager
-    @ObservedObject private var workflowRunner: WorkflowRunner = .shared
+    // TODO(plan-2): re-introduce active-plan checklist driven by HermesClient.
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -25,12 +25,8 @@ struct CompanionPanelView: View {
                 .padding(.top, 16)
                 .padding(.horizontal, 16)
 
-            if let activePlan = workflowRunner.activePlan,
-               !activePlan.steps.isEmpty {
-                Spacer().frame(height: 12)
-                planChecklistSection(plan: activePlan)
-                    .padding(.horizontal, 16)
-            }
+            // TODO(plan-2): show workflow checklist when HermesClient
+            // surfaces an active plan.
 
             if !companionManager.allPermissionsGranted {
                 Spacer().frame(height: 16)
@@ -68,21 +64,8 @@ struct CompanionPanelView: View {
         }
         .frame(width: 320)
         .background(panelBackground)
-        .sheet(isPresented: Binding(
-            get: { companionManager.pendingTrajectory != nil },
-            set: { if !$0 { companionManager.discardDemonstration() } }
-        )) {
-            SaveSkillSheetView(
-                companionManager: companionManager,
-                skillName: $pendingSkillName
-            )
-            .onAppear {
-                let formatter = DateFormatter()
-                formatter.dateStyle = .medium
-                formatter.timeStyle = .none
-                pendingSkillName = "Demonstration \(formatter.string(from: Date()))"
-            }
-        }
+        // TODO(plan-2): re-introduce the Save Skill sheet once skill
+        // capture is reintroduced via HermesClient.
     }
 
     // MARK: - Header
@@ -545,212 +528,9 @@ struct CompanionPanelView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Plan Checklist
-
-    /// Minimal checklist shown while a workflow plan is active. Lists every
-    /// step with the current one highlighted.
-    private func planChecklistSection(plan: WorkflowPlan) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(DS.Colors.textTertiary)
-                Text(plan.goal)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(DS.Colors.textPrimary)
-                    .lineLimit(1)
-                Spacer()
-                if let app = plan.app, !app.isEmpty {
-                    Text(app)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(DS.Colors.textTertiary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(plan.steps.enumerated()), id: \.element.id) { index, step in
-                    planChecklistRow(
-                        step: step,
-                        index: index,
-                        isCurrent: index == workflowRunner.activeStepIndex
-                    )
-                }
-            }
-
-            if let failureLabel = workflowRunner.currentStepResolutionFailureLabel {
-                planResolutionFailurePrompt(failureLabel: failureLabel)
-            }
-
-            Divider()
-                .background(DS.Colors.borderSubtle)
-                .padding(.top, 2)
-
-            planControlsRow
-
-            advanceOnAnyClickDebugToggleRow
-        }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(0.04))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(DS.Colors.borderSubtle, lineWidth: 0.5)
-        )
-    }
-
-    /// Debug switch that tells ClickDetector to advance on any click.
-    private var advanceOnAnyClickDebugToggleRow: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "ladybug")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(DS.Colors.textTertiary)
-            Text("Advance on any click")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(DS.Colors.textTertiary)
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { companionManager.advanceOnAnyClickEnabled },
-                set: { companionManager.setAdvanceOnAnyClickEnabled($0) }
-            ))
-            .toggleStyle(.switch)
-            .labelsHidden()
-            .tint(DS.Colors.accent)
-            .scaleEffect(0.7)
-        }
-    }
-
-    private struct PlanControlButtonStyle: ButtonStyle {
-        let isPrimary: Bool
-
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .foregroundColor(isPrimary ? .white : DS.Colors.textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(isPrimary
-                              ? DS.Colors.accent.opacity(configuration.isPressed ? 0.7 : 1.0)
-                              : Color.white.opacity(configuration.isPressed ? 0.14 : 0.08))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .stroke(DS.Colors.borderSubtle, lineWidth: 0.5)
-                )
-                .onHover { isHovering in
-                    if isHovering { NSCursor.pointingHand.push() }
-                    else { NSCursor.pop() }
-                }
-        }
-    }
-
-    private func planChecklistRow(step: WorkflowStep, index: Int, isCurrent: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("\(index + 1)")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(isCurrent ? .white : DS.Colors.textTertiary)
-                .frame(width: 18, height: 18)
-                .background(
-                    Circle().fill(isCurrent ? DS.Colors.accent : Color.white.opacity(0.06))
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(step.label ?? "(unlabeled)")
-                        .font(.system(size: 12, weight: isCurrent ? .semibold : .regular))
-                        .foregroundColor(isCurrent ? DS.Colors.textPrimary : DS.Colors.textSecondary)
-                        .lineLimit(1)
-
-                    if isCurrent && workflowRunner.isResolvingCurrentStep {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .scaleEffect(0.5)
-                            .frame(width: 12, height: 12)
-                    }
-                }
-                if !step.hint.isEmpty {
-                    Text(step.hint)
-                        .font(.system(size: 10))
-                        .foregroundColor(DS.Colors.textTertiary)
-                        .lineLimit(2)
-                }
-            }
-        }
-    }
-
-    private func planResolutionFailurePrompt(failureLabel: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.orange)
-
-            Text("Can't find \"\(failureLabel)\"")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(DS.Colors.textSecondary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button("Retry") {
-                workflowRunner.retryCurrentStep()
-            }
-            .buttonStyle(PlanControlButtonStyle(isPrimary: false))
-
-            Button("Skip") {
-                workflowRunner.skipCurrentStep()
-            }
-            .buttonStyle(PlanControlButtonStyle(isPrimary: true))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.orange.opacity(0.10))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(Color.orange.opacity(0.35), lineWidth: 0.5)
-        )
-    }
-
-    private var planControlsRow: some View {
-        HStack(spacing: 8) {
-            Button(role: .destructive) {
-                workflowRunner.stop()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 9, weight: .semibold))
-                    Text("Stop")
-                        .font(.system(size: 11, weight: .semibold))
-                }
-            }
-            .buttonStyle(PlanControlButtonStyle(isPrimary: false))
-
-            Spacer()
-
-            Button {
-                workflowRunner.skipCurrentStep()
-            } label: {
-                HStack(spacing: 4) {
-                    Text("Skip step")
-                        .font(.system(size: 11, weight: .medium))
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 9, weight: .semibold))
-                }
-            }
-            .buttonStyle(PlanControlButtonStyle(isPrimary: true))
-        }
-    }
+    // MARK: - Plan Checklist (removed)
+    // TODO(plan-2): re-introduce workflow checklist UI once HermesClient
+    // exposes active-plan state.
 
     // MARK: - Developer (bring-your-own-key)
 
@@ -851,7 +631,6 @@ struct CompanionPanelView: View {
     @State private var devOpenAIKeyStatus: String = ""
     @State private var devLumaKeyInput: String = ""
     @State private var devLumaKeyStatus: String = ""
-    @State private var pendingSkillName: String = ""
 
     /// One-line bring-your-own-key row. Icon + label on the left, a
     /// SecureField that grows to fill, and a single trailing icon button
@@ -951,25 +730,8 @@ struct CompanionPanelView: View {
             Spacer().frame(height: 6)
             #endif
 
-            sectionHeader("SKILL RECORDING")
-
-            if companionManager.isDemonstratingSkill {
-                devToolRow("Stop Recording", systemImage: "stop.circle.fill", destructive: true) {
-                    companionManager.stopDemonstration()
-                } trailing: {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 8, height: 8)
-                        .opacity(0.9)
-                }
-            } else {
-                devToolRow("Record Demonstration", systemImage: "record.circle") {
-                    companionManager.startDemonstration()
-                    NotificationCenter.default.post(name: .tipTourDismissPanel, object: nil)
-                }
-            }
-
-            Spacer().frame(height: 4)
+            // TODO(plan-2): re-introduce SKILL RECORDING controls once the
+            // demonstration capture path is reintroduced via HermesClient.
 
             sectionHeader("API KEYS (optional)")
 
@@ -1164,92 +926,4 @@ struct CompanionPanelView: View {
     }
 }
 
-// MARK: - Save Skill Sheet
-
-private struct SaveSkillSheetView: View {
-    @ObservedObject var companionManager: CompanionManager
-    @Binding var skillName: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Save Demonstration as Skill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(DS.Colors.textPrimary)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Skill name")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(DS.Colors.textTertiary)
-                TextField("Skill name", text: $skillName)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 13))
-            }
-
-            if companionManager.isExtractingSkill {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .scaleEffect(0.7)
-                    Text("Extracting skill with Claude…")
-                        .font(.system(size: 12))
-                        .foregroundColor(DS.Colors.textSecondary)
-                }
-            }
-
-            if let extractionError = companionManager.skillExtractionError {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.orange)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(extractionError)
-                            .font(.system(size: 11))
-                            .foregroundColor(DS.Colors.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button("Retry") {
-                            Task { await companionManager.saveSkill(name: skillName) }
-                        }
-                        .font(.system(size: 11, weight: .medium))
-                        .buttonStyle(.plain)
-                        .foregroundColor(DS.Colors.accent)
-                        .pointerCursor()
-                    }
-                }
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.orange.opacity(0.3), lineWidth: 0.5))
-            }
-
-            HStack(spacing: 10) {
-                Button("Discard") {
-                    companionManager.discardDemonstration()
-                }
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(DS.Colors.textSecondary)
-                .buttonStyle(.plain)
-                .pointerCursor()
-
-                Spacer()
-
-                Button("Save Skill") {
-                    Task { await companionManager.saveSkill(name: skillName) }
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(companionManager.isExtractingSkill || skillName.isEmpty
-                              ? DS.Colors.accent.opacity(0.4)
-                              : DS.Colors.accent)
-                )
-                .disabled(companionManager.isExtractingSkill || skillName.isEmpty)
-                .pointerCursor()
-            }
-        }
-        .padding(24)
-        .frame(width: 360)
-        .background(DS.Colors.background)
-    }
-}
+// MARK: - Save Skill Sheet (removed — to be reintroduced via HermesClient)

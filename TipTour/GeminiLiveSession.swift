@@ -83,9 +83,9 @@ final class GeminiLiveSession: ObservableObject {
     var onPointAtElement: ((_ id: String, _ label: String, _ box2DNormalized: [Int]?, _ screenshotJPEG: Data?) async -> [String: Any])?
 
     /// Fired when Gemini calls `submit_workflow_plan(goal, app, steps)`.
-    /// Gemini produces the plan itself via its own vision + reasoning, so
-    /// the handler just hands the steps off to WorkflowRunner and returns
-    /// an acknowledgement — no separate planner round-trip needed.
+    /// Gemini produces the plan itself via its own vision + reasoning;
+    /// the handler is expected to dispatch the plan (TODO(plan-2): route
+    /// through HermesClient) and return an acknowledgement.
     var onSubmitWorkflowPlan: ((_ id: String, _ goal: String, _ app: String, _ steps: [[String: Any]]) async -> [String: Any])?
 
     /// Fired when Gemini calls `spawn_background_task(task, task_type)`.
@@ -489,12 +489,9 @@ final class GeminiLiveSession: ObservableObject {
             return
         }
 
-        // Same idea, narrower trigger: while the on-device WorkflowRunner
-        // is executing a plan, never push fresh screenshots regardless
-        // of the suppression flag's state.
-        if await MainActor.run(body: { WorkflowRunner.shared.activePlan != nil }) {
-            return
-        }
+        // TODO(plan-2): re-add the "skip screenshot push while a plan is
+        // executing" short-circuit once HermesClient surfaces active-plan
+        // state.
 
         let screenLabel = primaryCapture.label
         let newHash = ScreenshotPerceptualHash.perceptualHash(forJPEGData: primaryCapture.imageData)
