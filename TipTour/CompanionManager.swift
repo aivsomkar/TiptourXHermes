@@ -136,6 +136,9 @@ final class CompanionManager: ObservableObject {
             _ = (task, taskType)
             return ["ok": false]
         }
+        backend.onAskHermes = { [weak self] id, task in
+            await self?.handleToolAskHermes(id: id, task: task) ?? ["ok": false, "error": "manager_gone"]
+        }
         backend.onInputTranscriptUpdate = { [weak self] fullInputTranscript in
             guard let self else { return }
             let isNewUtterance = fullInputTranscript.trimmingCharacters(in: .whitespacesAndNewlines).count > 0
@@ -305,6 +308,23 @@ final class CompanionManager: ObservableObject {
             "source": String(describing: resolution.source),
             "autopilot": isAutopilotEnabled
         ]
+    }
+
+    /// Handle the `ask_hermes` tool call. Routes the task to the shared
+    /// HermesClient, awaits its reply, and returns the final agent text as
+    /// the toolResponse so Gemini can speak it. Hermes's MCP tool calls
+    /// (speak / take_screenshot / get_a11y_tree / point_at) happen as side
+    /// effects during the await — by the time we return, the cursor may
+    /// already be pointing somewhere.
+    @MainActor
+    private func handleToolAskHermes(id: String, task: String) async -> [String: Any] {
+        print("[Tool] 🔧 ask_hermes(task=\"\(task.prefix(80))\")")
+        voiceState = .processing
+        await hermesClient.send(task)
+        voiceState = .responding
+        let replyText = hermesClient.lastAgentReplyText ?? ""
+        print("[Tool] ✅ ask_hermes returning text.count=\(replyText.count)")
+        return ["ok": true, "text": replyText]
     }
 
     /// Fire an autopilot click ~650ms after a single-element
