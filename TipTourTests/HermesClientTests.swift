@@ -116,4 +116,26 @@ final class HermesClientTests: XCTestCase {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? "0"
         return Int(text) ?? 0
     }
+
+    @MainActor
+    func testLastAgentReplyTextReturnsMostRecentAgentTurn() {
+        let client = HermesClient()
+        // Build a transcript: user → agent("A") → user → agent("B"). The
+        // accessor must return "B" (the most recent agent turn), not "A".
+        client._setTranscriptForTesting([
+            .user(id: UUID(), text: "first"),
+            .agent(id: UUID(), text: "A", toolCalls: []),
+            .user(id: UUID(), text: "second"),
+            .agent(id: UUID(), text: "B", toolCalls: [])
+        ])
+        XCTAssertEqual(client.lastAgentReplyText, "B")
+    }
+
+    @MainActor
+    func testLastAgentReplyTextReturnsNilWhenNoAgentTurns() {
+        let client = HermesClient()
+        XCTAssertNil(client.lastAgentReplyText)
+        client._setTranscriptForTesting([.user(id: UUID(), text: "hi")])
+        XCTAssertNil(client.lastAgentReplyText)
+    }
 }

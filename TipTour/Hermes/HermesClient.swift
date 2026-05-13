@@ -11,6 +11,22 @@ final class HermesClient: ObservableObject {
     @Published private(set) var isWorking: Bool = false
     @Published private(set) var lastError: String?
 
+    /// The text of the most recent `.agent` turn in `transcript`, or `nil`
+    /// if no agent has spoken yet. Used by CompanionManager.handleToolAskHermes
+    /// to extract Hermes's final answer for Gemini to speak.
+    var lastAgentReplyText: String? {
+        for turn in transcript.reversed() {
+            if case .agent(_, let text, _) = turn { return text }
+        }
+        return nil
+    }
+
+    /// Test-only escape hatch for seeding transcript state without running a
+    /// real Hermes subprocess. Underscore-prefixed to flag it as private API.
+    func _setTranscriptForTesting(_ turns: [ChatTurn]) {
+        transcript = turns
+    }
+
     /// MCP server URL to register with Hermes on `session/new`. Set this
     /// BEFORE the first `send()` call. Subsequent changes only take
     /// effect after `stop()` + a fresh `send()` (which recycles the
