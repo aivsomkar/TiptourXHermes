@@ -32,34 +32,6 @@
 		28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B626385D2FB2581000BDE96A /* Exceptions for "TipTourTests" folder in "tiptour-macosTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				AgentMemoryTests.swift,
-				AgentOverlayTests.swift,
-				AgentSwarmTests.swift,
-				AgentToolTests.swift,
-				DemonstrationTests.swift,
-				EfficiencyMonitorTests.swift,
-				GenerationToolTests.swift,
-				IntegrationPolishTests.swift,
-				SettingsTests.swift,
-				SkillEntrySpecFieldsTests.swift,
-				SkillFrontmatterParserBlockScalarTests.swift,
-				SkillImporterTests.swift,
-				SkillLibraryStoreFolderTests.swift,
-				SkillLibraryStoreInstallTests.swift,
-				SkillLibraryTests.swift,
-				SkillNameValidatorTests.swift,
-				SkillResourceToolsTests.swift,
-				SkillSpecValidatorTests.swift,
-				SkillStoreMigratorTests.swift,
-			);
-			target = 28F22CCB2F56440300A0FC59 /* tiptour-macosTests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		28F22CC12F56440300A0FC59 /* TipTour */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -71,7 +43,6 @@
 		28F22CCF2F56440300A0FC59 /* TipTourTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B626385D2FB2581000BDE96A /* Exceptions for "TipTourTests" folder in "tiptour-macosTests" target */,
 			);
 			path = TipTourTests;
 			sourceTree = "<group>";
