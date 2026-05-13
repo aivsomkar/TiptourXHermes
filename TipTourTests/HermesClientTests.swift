@@ -37,4 +37,35 @@ final class HermesClientTests: XCTestCase {
         } else { XCTFail("expected .system at index 1") }
         client.stop()
     }
+
+    /// Helper: returns true iff Hermes is configured locally —
+    /// ~/.hermes/config.yaml exists AND a provider key is in env.
+    /// Matches Tests/Python/smoke_test_acp.py's gate.
+    private func hermesConfiguredLocally() -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let configExists = FileManager.default.fileExists(
+            atPath: home.appendingPathComponent(".hermes/config.yaml").path
+        )
+        let keys = ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+        let hasKey = keys.contains { ProcessInfo.processInfo.environment[$0] != nil }
+        return configExists && hasKey
+    }
+
+    @MainActor
+    func testLiveAgentRoundTripProducesAgentTurn() async throws {
+        try XCTSkipUnless(hermesConfiguredLocally(),
+                          "Hermes not configured locally (no ~/.hermes/config.yaml or no provider key in env)")
+        let client = HermesClient()
+        await client.send("Reply with the single word 'pong'.")
+        // Find at least one .agent turn.
+        let agentTurn = client.transcript.first { turn in
+            if case .agent = turn { return true } else { return false }
+        }
+        XCTAssertNotNil(agentTurn, "no agent turn appeared in transcript")
+        if case .agent(_, let text, _) = agentTurn {
+            XCTAssertFalse(text.isEmpty)
+        }
+        XCTAssertFalse(client.isWorking)
+        client.stop()
+    }
 }

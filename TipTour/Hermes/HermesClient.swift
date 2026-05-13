@@ -27,20 +27,41 @@ final class HermesClient: ObservableObject {
     func send(_ userText: String) async {
         transcript.append(.user(id: UUID(), text: userText))
 
-        // First send launches the subprocess and runs initialize + new_session.
         if sessionId == nil {
             isWorking = true
-            defer { isWorking = false }
             do {
                 try await launchSubprocessIfNeeded()
                 try await initializeHandshake()
                 try await openSession()
             } catch {
+                isWorking = false
                 appendSystemError(error)
                 return
             }
         }
-        // Task 6 fills in session/prompt here. For Task 5 we stop after the handshake.
+
+        // Set up the in-progress agent turn buffer before sending the prompt.
+        currentAgentTurn = (id: UUID(), text: "", toolCalls: [])
+        isWorking = true
+
+        guard let sid = sessionId else {
+            // Defensive: handshake either set sessionId or returned. This
+            // guard covers the case where session reuse logic gets added later.
+            isWorking = false
+            appendSystemError(HermesClientError.subprocessGone)
+            return
+        }
+
+        let req = PromptRequest(sessionId: sid, prompt: [TextBlock(text: userText)])
+        do {
+            let _: PromptResult = try await sendRequest(method: "session/prompt", params: req)
+            commitCurrentAgentTurn()
+            isWorking = false
+        } catch {
+            currentAgentTurn = nil
+            isWorking = false
+            appendSystemError(error)
+        }
     }
 
     func stop() {
@@ -96,6 +117,17 @@ final class HermesClient: ObservableObject {
     /// stderr ring buffer (≤8 KB) so error messages can include the Python tail.
     private var stderrTail: Data = Data()
     private var nextRequestSeq: Int = 0
+
+    /// Buffer for the agent turn currently being assembled from
+    /// session/update notifications. Pushed into `transcript` when the
+    /// session/prompt response arrives.
+    private var currentAgentTurn: (id: UUID, text: String, toolCalls: [ToolCallRecord])?
+
+    private func commitCurrentAgentTurn() {
+        guard let t = currentAgentTurn else { return }
+        transcript.append(.agent(id: t.id, text: t.text, toolCalls: t.toolCalls))
+        currentAgentTurn = nil
+    }
 
     // MARK: Subprocess launch
 
@@ -214,20 +246,44 @@ final class HermesClient: ObservableObject {
     }
 
     private func handleFrame(_ line: Data) {
-        // Peek at the JSON to figure out whether it's a response (has
-        // "id" and no "method") or a notification/request (has "method").
         guard let envelope = try? JSONDecoder().decode(FrameEnvelope.self, from: line) else {
             return
         }
-        if envelope.method == nil, let id = envelope.id {
+        if let method = envelope.method, envelope.id == nil {
+            // Server-to-client notification — typically session/update.
+            handleNotification(method: method, line: line)
+        } else if envelope.method == nil, let id = envelope.id {
             // Response to a request we made.
             if let cont = pendingResponses.removeValue(forKey: id) {
                 cont.resume(returning: line)
             }
+        } else if envelope.method != nil, envelope.id != nil {
+            // Server-to-client REQUEST (e.g. session/request_permission).
+            // Task 7 implements the auto-allow response.
+        }
+    }
+
+    private func handleNotification(method: String, line: Data) {
+        guard method == "session/update" else { return }
+        struct NotifEnvelope: Decodable { let params: SessionUpdateNotification }
+        guard let notif = try? JSONDecoder().decode(NotifEnvelope.self, from: line) else {
             return
         }
-        // Task 6+ handle methods (notifications and server-initiated requests).
-        // For Task 5 we ignore them — the handshake never produces any.
+        applySessionUpdate(notif.params.update)
+    }
+
+    private func applySessionUpdate(_ update: SessionUpdate) {
+        guard currentAgentTurn != nil else { return }
+        switch update {
+        case .agentMessageChunk(let text):
+            currentAgentTurn?.text.append(text)
+        case .userMessageChunk:
+            break       // echoes of the user's own input; nothing to do
+        case .toolCallStart, .toolCallProgress, .toolCallEnd:
+            break       // Task 7
+        case .availableCommandsUpdate, .usageUpdate, .unknown:
+            break
+        }
     }
 
     private struct FrameEnvelope: Decodable {
