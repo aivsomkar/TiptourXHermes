@@ -8,25 +8,15 @@ import AppKit
 import SwiftUI
 
 @MainActor
-func makeHermesChatWindow(client: HermesClient, onClose: @escaping () -> Void) -> NSWindow {
+func makeHermesChatWindow(client: HermesClient) -> NSWindow {
     let hosting = NSHostingController(rootView: HermesChatView(client: client))
-    let window = HermesChatWindow(contentViewController: hosting)
+    let window = NSWindow(contentViewController: hosting)
     window.title = "Hermes Debug"
     window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
     window.setContentSize(NSSize(width: 480, height: 360))
     window.level = .floating
     window.isReleasedWhenClosed = false
-    window.closeHandler = onClose
     return window
-}
-
-final class HermesChatWindow: NSWindow {
-    var closeHandler: (() -> Void)?
-
-    override func close() {
-        closeHandler?()
-        super.close()
-    }
 }
 
 struct HermesChatView: View {

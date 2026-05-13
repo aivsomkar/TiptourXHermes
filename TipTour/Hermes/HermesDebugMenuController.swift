@@ -8,7 +8,7 @@
 import AppKit
 
 @MainActor
-final class HermesDebugMenuController: NSObject {
+final class HermesDebugMenuController: NSObject, NSWindowDelegate {
     private var statusItem: NSStatusItem?
     private var window: NSWindow?
     private let client = HermesClient()
@@ -35,14 +35,23 @@ final class HermesDebugMenuController: NSObject {
 
     @objc private func openChat() {
         if window == nil {
-            window = makeHermesChatWindow(client: client) { [weak self] in
-                // windowWillClose: terminate subprocess so closing the
-                // window actually frees ~400 MB of Python runtime.
-                self?.client.stop()
-                self?.window = nil
-            }
+            let w = makeHermesChatWindow(client: client)
+            w.delegate = self
+            window = w
         }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - NSWindowDelegate
+
+    /// Fires for every close path (red X, ⌘W, programmatic `close()`,
+    /// `orderOut:`-on-close, etc). Use this rather than overriding
+    /// `NSWindow.close()` — some AppKit code paths skip the subclass override.
+    func windowWillClose(_ notification: Notification) {
+        guard (notification.object as? NSWindow) === window else { return }
+        NSLog("[HermesDebugMenuController] windowWillClose — terminating Hermes subprocess")
+        client.stop()
+        window = nil
     }
 }
