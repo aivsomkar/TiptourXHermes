@@ -111,75 +111,6 @@ final class GeminiLiveClient: @unchecked Sendable {
         ]
     }
 
-    static var submitWorkflowPlanToolDeclaration: [String: Any] {
-        [
-            "name": "submit_workflow_plan",
-            "description": "For any multi-step walkthrough (opening a menu then picking an item, 'how do I X', 'walk me through Y', 'teach me Z'). Emit the FULL plan of steps as a structured argument. Gemini narrates each step after the tool returns, while the cursor flies through them in order.",
-            "parameters": [
-                "type": "object",
-                "properties": [
-                    "goal": [
-                        "type": "string",
-                        "description": "Short natural-language summary of what the user wants to accomplish."
-                    ],
-                    "app": [
-                        "type": "string",
-                        "description": "EXACT name of the foreground application visible in the screenshot — e.g. 'Blender', 'Xcode', 'GarageBand'. Used to target the right accessibility tree. Do NOT guess 'macOS' or 'unknown'."
-                    ],
-                    "steps": [
-                        "type": "array",
-                        "description": "Ordered list of steps. First step MUST be visible on the current screen; later steps describe the path to take after clicking step 1.",
-                        "items": [
-                            "type": "object",
-                            "properties": [
-                                "label": [
-                                    "type": "string",
-                                    "description": "Literal visible text of the element, or nearest label for an icon."
-                                ],
-                                "hint": [
-                                    "type": "string",
-                                    "description": "Short sentence describing this step — e.g. 'Open the File menu'."
-                                ],
-                                "box_2d": [
-                                    "type": "array",
-                                    "description": "Optional bounding box for the element in normalized [y1, x1, y2, x2] form, each value in [0, 1000] relative to the current screenshot. Origin is top-left, y comes first. Recommended for step 1 in apps without accessibility (Blender, games, canvas tools) and for ambiguous labels.",
-                                    "items": ["type": "integer"],
-                                    "minItems": 4,
-                                    "maxItems": 4
-                                ]
-                            ],
-                            "required": ["label"]
-                        ]
-                    ]
-                ],
-                "required": ["goal", "app", "steps"]
-            ]
-        ]
-    }
-
-    static var spawnBackgroundTaskToolDeclaration: [String: Any] {
-        [
-            "name": "spawn_background_task",
-            "description": "Start a background AI agent to handle a task that runs independently while the user continues the conversation. Use for tasks that take more than a few seconds, require tool use (shell, web search, file I/O), or need to run autonomously without voice narration. Do NOT use for quick lookups or things point_at_element/submit_workflow_plan already handle.",
-            "parameters": [
-                "type": "object",
-                "properties": [
-                    "task": [
-                        "type": "string",
-                        "description": "A clear, complete description of what the background agent should do. Include any context needed — the agent has no memory of this voice conversation."
-                    ],
-                    "task_type": [
-                        "type": "string",
-                        "description": "Category of the task, used to route to the right model and tools.",
-                        "enum": ["coding", "browserResearch", "imageGeneration", "videoGeneration",
-                                 "fileManagement", "generalMac", "analysis", "writing"]
-                    ]
-                ],
-                "required": ["task", "task_type"]
-            ]
-        ]
-    }
-
     static var askHermesToolDeclaration: [String: Any] {
         [
             "name": "ask_hermes",
@@ -278,13 +209,13 @@ final class GeminiLiveClient: @unchecked Sendable {
         // response modalities (audio + text transcriptions), system instruction,
         // automatic voice activity detection, AND the tools Gemini can call.
         //
-        // Three tools are declared:
-        //   - point_at_element(label): single-element pointing for "where's X" questions
-        //   - submit_workflow_plan(goal, app, steps): multi-step walkthroughs
-        //   - spawn_background_task(task, task_type): autonomous background agents
+        // Two tools are declared:
+        //   - point_at_element(label, box_2d?): single-element pointing
+        //   - ask_hermes(task): delegate to Hermes for deeper reasoning
         //
-        // Gemini chooses which tool to call based on the user's request. Tool
-        // declarations are static lets on this class so unit tests can verify them.
+        // Multi-step walkthroughs (the previous submit_workflow_plan) and
+        // autonomous background work (spawn_background_task) were removed in
+        // Plan 3c — see the spec for the new architecture.
 
 
         let setupMessage: [String: Any] = [
@@ -328,8 +259,6 @@ final class GeminiLiveClient: @unchecked Sendable {
                 "tools": [
                     ["functionDeclarations": [
                         Self.pointAtElementToolDeclaration,
-                        Self.submitWorkflowPlanToolDeclaration,
-                        Self.spawnBackgroundTaskToolDeclaration,
                         Self.askHermesToolDeclaration
                     ]]
                 ]

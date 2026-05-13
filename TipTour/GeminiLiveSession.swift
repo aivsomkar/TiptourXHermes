@@ -8,7 +8,7 @@
 //       and streams it over the WebSocket
 //    3. Sends a screenshot at session start so Gemini can see the screen
 //    4. Plays back audio responses in real time via GeminiLiveAudioPlayer
-//    5. Routes Gemini's tool calls (point_at_element, submit_workflow_plan)
+//    5. Routes Gemini's tool calls (point_at_element, ask_hermes)
 //       to CompanionManager via callbacks
 //
 
@@ -81,16 +81,6 @@ final class GeminiLiveSession: ObservableObject {
     /// relative to the screenshot Gemini saw last; nil when Gemini didn't
     /// supply one (e.g. it's confident the AX label resolves on its own).
     var onPointAtElement: ((_ id: String, _ label: String, _ box2DNormalized: [Int]?, _ screenshotJPEG: Data?) async -> [String: Any])?
-
-    /// Fired when Gemini calls `submit_workflow_plan(goal, app, steps)`.
-    /// Gemini produces the plan itself via its own vision + reasoning;
-    /// the handler is expected to dispatch the plan (TODO(plan-2): route
-    /// through HermesClient) and return an acknowledgement.
-    var onSubmitWorkflowPlan: ((_ id: String, _ goal: String, _ app: String, _ steps: [[String: Any]]) async -> [String: Any])?
-
-    /// Fired when Gemini calls `spawn_background_task(task, task_type)`.
-    /// The handler should spawn a background agent and return an acknowledgement.
-    var onSpawnBackgroundTask: ((_ task: String, _ taskType: String) async -> [String: Any])?
 
     /// Fired when Gemini calls `ask_hermes(task)`. The handler delegates to
     /// HermesClient.send(task), waits for Hermes's reply, and returns
@@ -276,12 +266,10 @@ final class GeminiLiveSession: ObservableObject {
 
     // MARK: - Narration Mode
     //
-    // Narration mode is entered once `submit_workflow_plan` has been
-    // accepted and the local runner owns the plan. We stop streaming
-    // mic audio and screenshots (both risk feeding Gemini noise that
-    // triggers interrupts), but keep the WebSocket + audio playback
-    // alive so we can push a single-sentence text per step and hear
-    // Gemini speak it in the same voice the user just heard.
+    // Narration mode pauses mic + screenshot streaming while keeping the
+    // WebSocket and audio playback alive. Used while Gemini speaks a
+    // post-tool-call narration so its own speech doesn't leak through
+    // the mic or get interrupted by stray screenshots.
 
     /// True while we've paused mic+screenshot streaming but still have
     /// a live socket for text-driven narration.
@@ -320,7 +308,7 @@ final class GeminiLiveSession: ObservableObject {
     /// Mark that a tool call was just satisfied, so subsequent
     /// screenshot pushes should be suppressed until the user speaks.
     /// CompanionManager calls this after a successful point_at_element
-    /// or submit_workflow_plan. The flag self-clears on the next
+    /// or ask_hermes call. The flag self-clears on the next
     /// inputTranscript chunk (i.e. the user spoke).
     func suppressScreenshotsUntilUserSpeaks() {
         guard isActive else { return }
@@ -484,7 +472,7 @@ final class GeminiLiveSession: ObservableObject {
         latestCapture = primaryCapture
 
         // After ANY successful tool call (point_at_element or
-        // submit_workflow_plan), suppress screenshot pushes until the
+        // ask_hermes), suppress screenshot pushes until the
         // user speaks again. Without this, Gemini sees frames showing
         // "user hasn't acted yet" and re-emits the same tool call in
         // a tight loop. Mic stays live so the moment the user actually
@@ -493,10 +481,6 @@ final class GeminiLiveSession: ObservableObject {
         if areScreenshotsSuppressedUntilUserSpeaks {
             return
         }
-
-        // TODO(plan-2): re-add the "skip screenshot push while a plan is
-        // executing" short-circuit once HermesClient surfaces active-plan
-        // state.
 
         let screenLabel = primaryCapture.label
         let newHash = ScreenshotPerceptualHash.perceptualHash(forJPEGData: primaryCapture.imageData)
@@ -770,7 +754,7 @@ final class GeminiLiveSession: ObservableObject {
             // Output transcript is only useful for debugging now that the
             // legacy [POINT:] tag fallback is gone — Gemini's pointing
             // intent comes through tool calls (point_at_element /
-            // submit_workflow_plan), not embedded markers in spoken text.
+            // ask_hermes), not embedded markers in spoken text.
             // Discard the chunk; the audio player handles user-facing
             // narration directly.
             break
@@ -957,25 +941,6 @@ final class GeminiLiveSession: ObservableObject {
                     response = await handler(id, label, box2D, screenshot)
                 } else {
                     print("[GeminiLiveSession] point_at_element called with no handler or empty label")
-                }
-
-            case "submit_workflow_plan":
-                let goal = (args["goal"] as? String) ?? ""
-                let app = (args["app"] as? String) ?? ""
-                let steps = (args["steps"] as? [[String: Any]]) ?? []
-                if !goal.isEmpty, !steps.isEmpty, let handler = onSubmitWorkflowPlan {
-                    response = await handler(id, goal, app, steps)
-                } else {
-                    print("[GeminiLiveSession] submit_workflow_plan called with no handler or empty steps")
-                }
-
-            case "spawn_background_task":
-                let task = (args["task"] as? String) ?? ""
-                let taskType = (args["task_type"] as? String) ?? "generalMac"
-                if !task.isEmpty, let handler = onSpawnBackgroundTask {
-                    response = await handler(task, taskType)
-                } else {
-                    print("[GeminiLiveSession] spawn_background_task called with no handler or empty task")
                 }
 
             case "ask_hermes":
