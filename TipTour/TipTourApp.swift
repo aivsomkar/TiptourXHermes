@@ -30,6 +30,7 @@ struct TipTour_HermesApp: App {
 @MainActor
 final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanelManager: MenuBarPanelManager?
+    private var hermesDebugMenu: HermesDebugMenuController?
     // agentOverlayWindowController removed with Overlay/ strip
     private let companionManager = CompanionManager()
     /// Held as a stored property so the player isn't deallocated mid-playback.
@@ -46,6 +47,8 @@ final class CompanionAppDelegate: NSObject, NSApplicationDelegate {
         // Analytics removed during rebrand; see Plan 2 if reinstating.
 
         menuBarPanelManager = MenuBarPanelManager(companionManager: companionManager)
+        hermesDebugMenu = HermesDebugMenuController()
+        hermesDebugMenu?.install()
         // AgentOverlayWindowController.shared removed with Overlay/ strip
         companionManager.start()
         // Auto-open the panel if the user still needs to do something:
