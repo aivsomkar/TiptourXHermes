@@ -203,6 +203,18 @@ final class MCPServer {
         case "notifications/initialized":
             respondEmpty(on: connection)
 
+        case "tools/list":
+            let list: [[String: Any]] = tools.values.map { tool -> [String: Any] in
+                let schemaData = (try? JSONEncoder().encode(tool.inputSchema)) ?? Data()
+                let schemaObject = (try? JSONSerialization.jsonObject(with: schemaData)) ?? [String: Any]()
+                return [
+                    "name": tool.name,
+                    "description": tool.description,
+                    "inputSchema": schemaObject,
+                ]
+            }
+            respond(envelope: env, result: ["tools": list], on: connection)
+
         default:
             respondError(envelope: env, code: -32601, message: "method not found: \(method)", on: connection)
         }

@@ -47,4 +47,21 @@ final class MCPServerTests: XCTestCase {
         let info = result?["serverInfo"] as? [String: Any]
         XCTAssertEqual(info?["name"] as? String, "test")
     }
+
+    @MainActor
+    func testToolsListIncludesRegisteredTool() async throws {
+        let server = MCPServer(name: "test")
+        server.register(SpeakTool())
+        let url = try server.start()
+        defer { server.stop() }
+        let resp = try await postJSON(to: url, body: [
+            "jsonrpc": "2.0", "id": 2, "method": "tools/list"
+        ])
+        let result = resp["result"] as? [String: Any]
+        let tools = result?["tools"] as? [[String: Any]] ?? []
+        XCTAssertEqual(tools.count, 1)
+        XCTAssertEqual(tools.first?["name"] as? String, "speak")
+        XCTAssertNotNil(tools.first?["description"])
+        XCTAssertNotNil(tools.first?["inputSchema"])
+    }
 }
