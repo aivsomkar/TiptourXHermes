@@ -635,6 +635,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
+				PRODUCT_MODULE_NAME = TipTour;
 				PRODUCT_NAME = TipTour_Hermes;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -700,6 +701,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
+				PRODUCT_MODULE_NAME = TipTour;
 				PRODUCT_NAME = TipTour_Hermes;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -729,7 +731,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TipTour.app/Contents/MacOS/TipTour";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TipTour_Hermes.app/Contents/MacOS/TipTour_Hermes";
 			};
 			name = Debug;
 		};
@@ -751,7 +753,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tiptour-macos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tiptour-macos";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TipTour_Hermes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TipTour_Hermes";
 			};
 			name = Release;
 		};

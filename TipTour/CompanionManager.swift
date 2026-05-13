@@ -11,7 +11,6 @@ import ApplicationServices
 import AVFoundation
 import Combine
 import Foundation
-import PostHog
 import ScreenCaptureKit
 import SwiftUI
 
