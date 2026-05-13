@@ -585,7 +585,6 @@ final class CompanionManager: ObservableObject {
     func triggerOnboarding() {
         NotificationCenter.default.post(name: .tipTourDismissPanel, object: nil)
         hasCompletedOnboarding = true
-        TipTourAnalytics.trackOnboardingStarted()
         overlayWindowManager.showOverlay(onScreens: NSScreen.screens, companionManager: self)
         isOverlayVisible = true
     }
@@ -875,22 +874,9 @@ final class CompanionManager: ObservableObject {
             print("🔑 Permissions — accessibility: \(hasAccessibilityPermission), screen: \(hasScreenRecordingPermission), mic: \(hasMicrophonePermission), screenContent: \(hasScreenContentPermission)")
         }
 
-        if !previouslyHadAccessibility && hasAccessibilityPermission {
-            TipTourAnalytics.trackPermissionGranted(permission: "accessibility")
-        }
-        if !previouslyHadScreenRecording && hasScreenRecordingPermission {
-            TipTourAnalytics.trackPermissionGranted(permission: "screen_recording")
-        }
-        if !previouslyHadMicrophone && hasMicrophonePermission {
-            TipTourAnalytics.trackPermissionGranted(permission: "microphone")
-        }
         // Screen content permission is persisted — once approved it sticks.
         if !hasScreenContentPermission {
             hasScreenContentPermission = UserDefaults.standard.bool(forKey: "hasScreenContentPermission")
-        }
-
-        if !previouslyHadAll && allPermissionsGranted {
-            TipTourAnalytics.trackAllPermissionsGranted()
         }
     }
 
@@ -918,7 +904,6 @@ final class CompanionManager: ObservableObject {
                     guard didCapture else { return }
                     hasScreenContentPermission = true
                     UserDefaults.standard.set(true, forKey: "hasScreenContentPermission")
-                    TipTourAnalytics.trackPermissionGranted(permission: "screen_content")
 
                     if hasCompletedOnboarding && allPermissionsGranted && !isOverlayVisible {
                         overlayWindowManager.hasShownOverlayBefore = true
@@ -1051,8 +1036,6 @@ final class CompanionManager: ObservableObject {
             onboardingPromptText = ""
             onboardingPromptOpacity = 0.0
 
-            TipTourAnalytics.trackPushToTalkStarted()
-
             // Gemini Live uses TOGGLE behavior — press once to start, press
             // again to end. The connection stays open across turns so the
             // user can have a real conversation.
@@ -1065,7 +1048,7 @@ final class CompanionManager: ObservableObject {
             }
         case .released:
             // Release is a no-op — the session is toggled by hotkey PRESS.
-            TipTourAnalytics.trackPushToTalkReleased()
+            break
         case .none:
             break
         }
