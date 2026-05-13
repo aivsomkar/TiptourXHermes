@@ -180,6 +180,23 @@ final class GeminiLiveClient: @unchecked Sendable {
         ]
     }
 
+    static var askHermesToolDeclaration: [String: Any] {
+        [
+            "name": "ask_hermes",
+            "description": "Delegate to Hermes — a deeper-reasoning sub-agent with shell, file, web, and screen tools. Use for coding questions, multi-step research, tasks that need running commands or reading files, and anything that benefits from longer, more careful thought. Don't use for 'where is X' on screen (use point_at_element) or quick chit-chat. Hermes returns its final answer as text in the toolResponse; you then paraphrase it aloud for voice. Speak ONE short acknowledgement BEFORE the call ('on it, let me check') so the user isn't left in silence while Hermes works.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "task": [
+                        "type": "string",
+                        "description": "Complete, self-contained description of the work. Hermes has no memory of this voice conversation — include all the context it needs."
+                    ]
+                ],
+                "required": ["task"]
+            ]
+        ]
+    }
+
     // MARK: - State (protected by stateLock)
 
     private let stateLock = NSLock()
@@ -312,7 +329,8 @@ final class GeminiLiveClient: @unchecked Sendable {
                     ["functionDeclarations": [
                         Self.pointAtElementToolDeclaration,
                         Self.submitWorkflowPlanToolDeclaration,
-                        Self.spawnBackgroundTaskToolDeclaration
+                        Self.spawnBackgroundTaskToolDeclaration,
+                        Self.askHermesToolDeclaration
                     ]]
                 ]
             ]

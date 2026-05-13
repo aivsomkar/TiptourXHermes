@@ -92,6 +92,11 @@ final class GeminiLiveSession: ObservableObject {
     /// The handler should spawn a background agent and return an acknowledgement.
     var onSpawnBackgroundTask: ((_ task: String, _ taskType: String) async -> [String: Any])?
 
+    /// Fired when Gemini calls `ask_hermes(task)`. The handler delegates to
+    /// HermesClient.send(task), waits for Hermes's reply, and returns
+    /// `{ok: true, text: <hermes reply>}` so Gemini speaks the answer.
+    var onAskHermes: ((_ id: String, _ task: String) async -> [String: Any])?
+
     // MARK: - Dependencies
 
     private let geminiClient = GeminiLiveClient()
@@ -973,6 +978,14 @@ final class GeminiLiveSession: ObservableObject {
                     print("[GeminiLiveSession] spawn_background_task called with no handler or empty task")
                 }
 
+            case "ask_hermes":
+                let task = (args["task"] as? String) ?? ""
+                if !task.isEmpty, let handler = onAskHermes {
+                    response = await handler(id, task)
+                } else {
+                    print("[GeminiLiveSession] ask_hermes called with no handler or empty task")
+                }
+
             default:
                 print("[GeminiLiveSession] unknown tool \(name) — ignoring")
                 response = ["ok": false, "error": "unknown_tool"]
@@ -988,5 +1001,12 @@ final class GeminiLiveSession: ObservableObject {
     /// Directly invokes handleToolCall without a live WebSocket. Used in unit tests.
     func simulateToolCall(id: String, name: String, args: [String: Any]) {
         handleToolCall(id: id, name: name, args: args)
+    }
+
+    /// Test-only escape hatch to bypass the "no tool calls before user
+    /// speech" gate that handleToolCall enforces. Lets unit tests exercise
+    /// the tool-dispatch switch without a live mic.
+    func _setHasReceivedUserSpeechForTesting(_ value: Bool) {
+        hasReceivedUserSpeechThisSession = value
     }
 }
