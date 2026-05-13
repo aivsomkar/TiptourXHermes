@@ -157,9 +157,17 @@ struct SessionUpdateNotification: Decodable {
 enum SessionUpdate: Decodable {
     case agentMessageChunk(text: String)
     case userMessageChunk(text: String)
-    case toolCallStart(id: String, name: String, args: JSONValue, location: JSONValue?)
-    case toolCallProgress(id: String, status: String, output: JSONValue?)
-    case toolCallEnd(id: String, status: String)
+    /// Tool invocation announced by Hermes. Real ACP shape (verified
+    /// against agent-client-protocol 0.9.0 with hermes-agent 0.13.0):
+    /// no `name`/`args` fields — instead `kind` (e.g. "execute"),
+    /// `title` (human-readable summary), and `content` (array of
+    /// content blocks describing what's being run).
+    case toolCallStart(id: String, kind: String, title: String, content: JSONValue)
+    /// Status / partial output update for an in-flight tool call. The
+    /// terminal event arrives as another `tool_call_update` with
+    /// `status: "completed"` (or "failed") — there is no separate
+    /// `tool_call_end` discriminator in 0.9.0.
+    case toolCallUpdate(id: String, status: String, content: JSONValue?)
     case availableCommandsUpdate(commands: [JSONValue])
     case usageUpdate(size: Int?, used: Int)
     case unknown(raw: JSONValue)
@@ -192,29 +200,32 @@ enum SessionUpdate: Decodable {
             } else {
                 self = .unknown(raw: raw)
             }
-        case "tool_call_start":
-            if case .string(let id) = dict["toolCallId"] ?? .null,
-               case .string(let name) = dict["name"] ?? .null {
+        case "tool_call":
+            if case .string(let id) = dict["toolCallId"] ?? .null {
+                let kind: String = {
+                    if case .string(let k) = dict["kind"] ?? .null { return k }
+                    return "tool"
+                }()
+                let title: String = {
+                    if case .string(let t) = dict["title"] ?? .null { return t }
+                    return kind
+                }()
                 self = .toolCallStart(
                     id: id,
-                    name: name,
-                    args: dict["args"] ?? .null,
-                    location: dict["location"]
+                    kind: kind,
+                    title: title,
+                    content: dict["content"] ?? .null
                 )
             } else {
                 self = .unknown(raw: raw)
             }
-        case "tool_call_progress":
-            if case .string(let id) = dict["toolCallId"] ?? .null,
-               case .string(let status) = dict["status"] ?? .null {
-                self = .toolCallProgress(id: id, status: status, output: dict["output"])
-            } else {
-                self = .unknown(raw: raw)
-            }
-        case "tool_call_end":
-            if case .string(let id) = dict["toolCallId"] ?? .null,
-               case .string(let status) = dict["status"] ?? .null {
-                self = .toolCallEnd(id: id, status: status)
+        case "tool_call_update":
+            if case .string(let id) = dict["toolCallId"] ?? .null {
+                let status: String = {
+                    if case .string(let s) = dict["status"] ?? .null { return s }
+                    return "pending"
+                }()
+                self = .toolCallUpdate(id: id, status: status, content: dict["content"])
             } else {
                 self = .unknown(raw: raw)
             }

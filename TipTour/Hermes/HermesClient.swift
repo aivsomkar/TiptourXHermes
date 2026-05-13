@@ -344,20 +344,21 @@ final class HermesClient: ObservableObject {
         case .userMessageChunk:
             break
 
-        case .toolCallStart(let id, let name, let args, _):
-            let preview = Self.makeArgsPreview(name: name, args: args)
-            let full = Self.makeArgsFull(args: args)
+        case .toolCallStart(let id, let kind, let title, let content):
+            // ACP 0.9.0 carries no `name`/`args` on tool_call — only `kind`,
+            // `title`, and a content blob. Use `title` as the user-facing
+            // preview ("terminal: echo 'plan2 ok'") and serialize `content`
+            // for the expandable detail.
             let record = ToolCallRecord(
-                id: id, name: name,
-                argsPreview: preview, argsFull: full,
+                id: id,
+                name: kind,
+                argsPreview: title,
+                argsFull: Self.makeArgsFull(args: content),
                 status: .pending
             )
             currentAgentTurn?.toolCalls.append(record)
 
-        case .toolCallProgress(let id, let status, _):
-            updateToolCallStatus(id: id, hermesStatus: status)
-
-        case .toolCallEnd(let id, let status):
+        case .toolCallUpdate(let id, let status, _):
             updateToolCallStatus(id: id, hermesStatus: status)
 
         case .availableCommandsUpdate, .usageUpdate, .unknown:
