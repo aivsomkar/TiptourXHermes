@@ -11,9 +11,3 @@ build/
 releases/
 *.xcarchive/
 *.dmg
-
-# git on macOS is case-insensitive by default, so `build/` above also
-# matches our source `Build/` directory (the Hermes bundling scripts).
-# Negate it explicitly so the bundler infra is tracked.
-!Build/
-!Build/**

@@ -4,8 +4,11 @@
 
 set -euo pipefail
 
-PYTHON_VERSION="3.11.9"
-PYTHON_BUILD="20240909"
+# python-build-standalone was transferred from indygreg/ to astral-sh/ in
+# 2025; old indygreg URLs 404 today. The astral-sh repo publishes the same
+# release naming scheme so only the host org changes.
+PYTHON_VERSION="3.11.15"
+PYTHON_BUILD="20260510"
 PYTHON_ARCH="aarch64-apple-darwin"
 PYTHON_FLAVOUR="install_only"
 HERMES_GIT_REF="${HERMES_GIT_REF:-main}"
@@ -14,7 +17,7 @@ PROJECT_DIR="${SRCROOT:-$(pwd)}"
 OUT_DIR="${1:-$PROJECT_DIR/build/hermes-runtime}"
 CACHE_DIR="$PROJECT_DIR/build/.cache"
 
-PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-$PYTHON_VERSION+$PYTHON_BUILD-$PYTHON_ARCH-$PYTHON_FLAVOUR.tar.gz"
+PYTHON_URL="https://github.com/astral-sh/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-$PYTHON_VERSION+$PYTHON_BUILD-$PYTHON_ARCH-$PYTHON_FLAVOUR.tar.gz"
 PYTHON_ARCHIVE="$CACHE_DIR/python-$PYTHON_VERSION-$PYTHON_BUILD-$PYTHON_ARCH.tar.gz"
 
 mkdir -p "$CACHE_DIR" "$OUT_DIR"
