@@ -3,8 +3,8 @@
 //  TipTour
 //
 //  SwiftUI content hosted inside the menu bar panel. Minimal layout:
-//  status header, permissions setup or hotkey hint, optional workflow
-//  checklist, neko toggle, developer section, footer. Dark aesthetic via DS.
+//  status header, permissions setup or hotkey hint, neko toggle,
+//  developer section, footer. Dark aesthetic via DS.
 //
 
 import AVFoundation
@@ -12,7 +12,6 @@ import SwiftUI
 
 struct CompanionPanelView: View {
     @ObservedObject var companionManager: CompanionManager
-    // TODO(plan-2): re-introduce active-plan checklist driven by HermesClient.
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,9 +23,6 @@ struct CompanionPanelView: View {
             permissionsCopySection
                 .padding(.top, 16)
                 .padding(.horizontal, 16)
-
-            // TODO(plan-2): show workflow checklist when HermesClient
-            // surfaces an active plan.
 
             if !companionManager.allPermissionsGranted {
                 Spacer().frame(height: 16)
@@ -45,9 +41,6 @@ struct CompanionPanelView: View {
                     .padding(.horizontal, 16)
 
                 Spacer().frame(height: 4)
-                autopilotToggleRow
-                    .padding(.horizontal, 16)
-                Spacer().frame(height: 6)
                 nekoModeToggleRow
                     .padding(.horizontal, 16)
             }
@@ -64,8 +57,6 @@ struct CompanionPanelView: View {
         }
         .frame(width: 320)
         .background(panelBackground)
-        // TODO(plan-2): re-introduce the Save Skill sheet once skill
-        // capture is reintroduced via HermesClient.
     }
 
     // MARK: - Header
@@ -434,60 +425,6 @@ struct CompanionPanelView: View {
         .pointerCursor()
     }
 
-    // MARK: - Autopilot Toggle
-
-    /// Promotes TipTour from teaching ("show me how") to autopilot
-    /// ("do it for me"). When ON, the cursor flies to each resolved
-    /// element and TipTour clicks it for the user; workflow plans
-    /// drive themselves end-to-end (including keyboard shortcuts and
-    /// text typing). When OFF (default), TipTour only points and the
-    /// user clicks themselves.
-    ///
-    /// We give this prominence in the panel — same row weight as Neko
-    /// — because it's a real change in behavior the user should be
-    /// aware of every time they open the panel.
-    private var autopilotToggleRow: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Image(systemName: companionManager.isAutopilotEnabled
-                      ? "wand.and.stars"
-                      : "hand.tap")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(
-                        companionManager.isAutopilotEnabled
-                            ? DS.Colors.accent
-                            : DS.Colors.textTertiary
-                    )
-                    .frame(width: 16)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Autopilot")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(DS.Colors.textSecondary)
-                    Text(
-                        companionManager.isAutopilotEnabled
-                            ? "TipTour clicks for you"
-                            : "TipTour only points; you click"
-                    )
-                    .font(.system(size: 10))
-                    .foregroundColor(DS.Colors.textTertiary)
-                }
-            }
-
-            Spacer()
-
-            Toggle("", isOn: Binding(
-                get: { companionManager.isAutopilotEnabled },
-                set: { companionManager.setAutopilotEnabled($0) }
-            ))
-            .toggleStyle(.switch)
-            .labelsHidden()
-            .tint(DS.Colors.accent)
-            .scaleEffect(0.8)
-        }
-        .padding(.vertical, 4)
-    }
-
     // MARK: - Neko Mode Toggle
 
     /// Whimsical toggle that swaps the blue triangle cursor for a
@@ -528,12 +465,6 @@ struct CompanionPanelView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Plan Checklist (removed)
-    // TODO(plan-2): re-introduce workflow checklist UI once HermesClient
-    // exposes active-plan state.
-
-    // MARK: - Developer (bring-your-own-key)
-
     // MARK: - Footer
 
     private var feedbackButton: some View {
@@ -562,10 +493,6 @@ struct CompanionPanelView: View {
             HStack(spacing: 0) {
                 feedbackButton
 
-                footerButton("Settings", systemImage: "gearshape", toggled: showSettings) {
-                    showSettings.toggle()
-                }
-
                 // Always-visible Dev button — gives shipped users access to
                 // the voice-backend picker and BYOK key inputs. The truly
                 // debug-only rows (Detection Overlay, Test Cursor Flight,
@@ -585,9 +512,6 @@ struct CompanionPanelView: View {
                 devToolsSection
                     .padding(.top, 8)
             }
-        }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
         }
     }
 
@@ -621,7 +545,6 @@ struct CompanionPanelView: View {
     /// The detection-overlay / cursor-flight / reset-all rows below are
     /// still gated by `#if DEBUG` because they're internal-only and
     /// have no use to a casual user.
-    @State private var showSettings: Bool = false
     @State private var showDevTools: Bool = false
     @State private var devGeminiKeyInput: String = ""
     @State private var devGeminiKeyStatus: String = ""
@@ -729,9 +652,6 @@ struct CompanionPanelView: View {
 
             Spacer().frame(height: 6)
             #endif
-
-            // TODO(plan-2): re-introduce SKILL RECORDING controls once the
-            // demonstration capture path is reintroduced via HermesClient.
 
             sectionHeader("API KEYS (optional)")
 
@@ -925,5 +845,3 @@ struct CompanionPanelView: View {
         }
     }
 }
-
-// MARK: - Save Skill Sheet (removed — to be reintroduced via HermesClient)
