@@ -56,4 +56,19 @@ exec "$DIR/python-relocatable/bin/python3" -m acp_adapter "$@"
 ENTRYPOINT_EOF
 chmod +x "$OUT_DIR/hermes-runtime"
 
+# Strip macOS extended attributes — python-build-standalone tarballs and
+# pip-installed wheels carry `com.apple.provenance` and similar attrs
+# that make codesign reject the file with "resource fork ... not allowed".
+echo "→ Stripping extended attributes"
+xattr -cr "$OUT_DIR" 2>/dev/null || true
+
+# Ad-hoc sign every Mach-O file in the runtime so Xcode's outer
+# hardened-runtime sign pass doesn't choke on "code object is not signed
+# at all". Identity `-` means ad-hoc (no team identity); Xcode re-signs
+# the whole .app with the dev team afterwards.
+echo "→ Ad-hoc signing bundled Mach-O files"
+find "$OUT_DIR" -type f \( -name '*.dylib' -o -name '*.so' -o -perm -u+x \) -print0 \
+  | xargs -0 -n 50 codesign --force --sign - --timestamp=none 2>/dev/null \
+  || echo "  (some files could not be signed; non-fatal for dev builds)"
+
 echo "✓ Bundled Hermes ready at $OUT_DIR"
