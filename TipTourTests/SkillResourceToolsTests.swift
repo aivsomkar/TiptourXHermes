@@ -15,7 +15,7 @@ struct SkillLibraryStoreResourceTests {
     }
 
     /// Build a spec-format skill on disk with optional sub-files.
-    private static func writeSkill(
+    static func writeSkill(
         in dir: URL,
         slug: String,
         extraFiles: [(relativePath: String, content: String)] = []

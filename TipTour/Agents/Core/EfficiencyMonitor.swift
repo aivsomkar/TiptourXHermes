@@ -8,12 +8,15 @@ actor EfficiencyMonitor {
 
     private let tokenBudget: Int
     private let providerOverride: (any LLMProvider)?
+    private let selfCritiqueThresholdOverride: Double?
 
     init(
         tokenBudget: Int = 8_000,
+        selfCritiqueThreshold: Double? = nil,
         providerOverride: (any LLMProvider)? = nil
     ) {
         self.tokenBudget = tokenBudget
+        self.selfCritiqueThresholdOverride = selfCritiqueThreshold
         self.providerOverride = providerOverride
     }
 
@@ -36,7 +39,9 @@ actor EfficiencyMonitor {
             + backtrackFraction   * 0.2
         )
 
-        let selfCritiqueThreshold = UserDefaults.standard.object(forKey: "selfCritiqueThreshold") as? Double ?? 0.4
+        let selfCritiqueThreshold = selfCritiqueThresholdOverride
+            ?? (UserDefaults.standard.object(forKey: "selfCritiqueThreshold") as? Double)
+            ?? 0.4
         guard inefficiencyScore > selfCritiqueThreshold else {
             return EfficiencyReport(
                 inefficiencyScore: inefficiencyScore,

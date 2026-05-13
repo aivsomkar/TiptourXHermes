@@ -41,7 +41,7 @@ import Foundation
             outputDirectory: URL(fileURLWithPath: NSTemporaryDirectory()),
             urlSession: URLSession.shared
         )
-        let result = await tool.execute(argumentsJSON: """{"prompt":"test"}""")
+        let result = await tool.execute(argumentsJSON: "{\"prompt\":\"test\"}")
         #expect(result.hasPrefix("Error:"))
         #expect(result.contains("API key"))
     }
@@ -103,7 +103,7 @@ import Foundation
             urlSession: URLSession.shared,
             pollIntervalSeconds: 0
         )
-        let result = await tool.execute(argumentsJSON: """{"prompt":"test"}""")
+        let result = await tool.execute(argumentsJSON: "{\"prompt\":\"test\"}")
         #expect(result.hasPrefix("Error:"))
         #expect(result.contains("Luma"))
     }

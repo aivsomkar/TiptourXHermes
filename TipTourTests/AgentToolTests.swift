@@ -232,13 +232,11 @@ struct TaskAgentToolIntegrationTests {
             return .text("Task complete.")
         }
 
-        let toolBox = ToolBox.build(for: .fileManagement)
         let agent = TaskAgent(
             taskDescription: "Echo a test string",
             taskType: .fileManagement,
             provider: mockProvider,
-            swarmManager: swarm,
-            toolBox: toolBox
+            swarmManager: swarm
         )
 
         await agent.run()

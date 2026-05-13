@@ -8,6 +8,7 @@
 import Testing
 @testable import TipTour
 
+@MainActor
 struct TipTourTests {
 
     @Test func firstPermissionRequestUsesSystemPromptOnly() async throws {

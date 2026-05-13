@@ -1,6 +1,7 @@
 // TipTourTests/DemonstrationTests.swift
 
 import Foundation
+import CoreGraphics
 import Testing
 @testable import TipTour
 
