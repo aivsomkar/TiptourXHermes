@@ -609,7 +609,7 @@
 				INFOPLIST_FILE = TipTour/Info.plist;
 				INFOPLIST_KEY_AnthropicAPIURL = "https://api.anthropic.com/v1/messages";
 				INFOPLIST_KEY_AnthropicModel = "claude-sonnet-4-6";
-				INFOPLIST_KEY_CFBundleDisplayName = TipTour;
+				INFOPLIST_KEY_CFBundleDisplayName = TipTour_Hermes;
 				INFOPLIST_KEY_CFBundleName = TipTour;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TipTour uses Apple Events to control other apps on your behalf - opening URLs in Chrome and Safari, sending iMessages, organizing Finder, and other agent-driven workflows. You will be asked to allow each target app individually the first time TipTour tries to drive it.";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "TipTour agents may read your Music library when you ask them to find tracks or build playlists.";
@@ -643,7 +643,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
-				PRODUCT_NAME = TipTour;
+				PRODUCT_NAME = TipTour_Hermes;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -674,7 +674,7 @@
 				INFOPLIST_FILE = TipTour/Info.plist;
 				INFOPLIST_KEY_AnthropicAPIURL = "https://api.anthropic.com/v1/messages";
 				INFOPLIST_KEY_AnthropicModel = "claude-sonnet-4-6";
-				INFOPLIST_KEY_CFBundleDisplayName = TipTour;
+				INFOPLIST_KEY_CFBundleDisplayName = TipTour_Hermes;
 				INFOPLIST_KEY_CFBundleName = TipTour;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TipTour uses Apple Events to control other apps on your behalf - opening URLs in Chrome and Safari, sending iMessages, organizing Finder, and other agent-driven workflows. You will be asked to allow each target app individually the first time TipTour tries to drive it.";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "TipTour agents may read your Music library when you ask them to find tracks or build playlists.";
@@ -708,7 +708,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milindsoni.tiptour;
-				PRODUCT_NAME = TipTour;
+				PRODUCT_NAME = TipTour_Hermes;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

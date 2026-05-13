@@ -13,7 +13,7 @@ import SwiftUI
 import Sparkle
 
 @main
-struct TipTourApp: App {
+struct TipTour_HermesApp: App {
     @NSApplicationDelegateAdaptor(CompanionAppDelegate.self) var appDelegate
 
     var body: some Scene {
