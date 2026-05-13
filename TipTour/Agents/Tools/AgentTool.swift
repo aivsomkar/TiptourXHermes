@@ -75,22 +75,7 @@ struct ToolBox: Sendable {
     static func build(for taskType: TaskType) -> ToolBox {
         let sharedTools: [any AgentTool] = [
             RememberFactTool(taskType: taskType),
-            RecallFactsTool(taskType: taskType),
-            RecallSkillTool(taskType: taskType),
-            ReadSkillResourceTool(taskType: taskType)
-        ]
-        return ToolBox(tools: domainTools(for: taskType) + sharedTools)
-    }
-
-    /// Builds the full toolbox including SaveSkillTool wired to the given history buffer.
-    /// TaskAgent calls this overload so save_skill can snapshot the agent's live tool call history.
-    static func build(for taskType: TaskType, historyBuffer: ToolCallHistoryBuffer) -> ToolBox {
-        let sharedTools: [any AgentTool] = [
-            RememberFactTool(taskType: taskType),
-            RecallFactsTool(taskType: taskType),
-            SaveSkillTool(taskType: taskType, historyBuffer: historyBuffer),
-            RecallSkillTool(taskType: taskType),
-            ReadSkillResourceTool(taskType: taskType)
+            RecallFactsTool(taskType: taskType)
         ]
         return ToolBox(tools: domainTools(for: taskType) + sharedTools)
     }
@@ -105,16 +90,12 @@ struct ToolBox: Sendable {
     /// agents' workspaces.
     static func build(
         for taskType: TaskType,
-        historyBuffer: ToolCallHistoryBuffer,
         interactiveShellSession: InteractiveShellSession,
         workspaceURL: URL?
     ) -> ToolBox {
         let sharedTools: [any AgentTool] = [
             RememberFactTool(taskType: taskType),
-            RecallFactsTool(taskType: taskType),
-            SaveSkillTool(taskType: taskType, historyBuffer: historyBuffer),
-            RecallSkillTool(taskType: taskType),
-            ReadSkillResourceTool(taskType: taskType)
+            RecallFactsTool(taskType: taskType)
         ]
         var domain = domainTools(for: taskType)
         // Persistent shell is most valuable for coding / file work /

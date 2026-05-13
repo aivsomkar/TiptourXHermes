@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B626385B2FB2581000BDE96A /* BundledSkills in Resources */ = {isa = PBXBuildFile; fileRef = B626385C2FB2581000BDE96A /* BundledSkills */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,159 +30,9 @@
 		28F22CBF2F56440300A0FC59 /* TipTour.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TipTour.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F22CCC2F56440300A0FC59 /* tiptour-macosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		B626385C2FB2581000BDE96A /* BundledSkills */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BundledSkills; path = TipTour/Agents/Skills/BundledSkills; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B626385A2FB2581000BDE96A /* Exceptions for "TipTour" folder in "tiptour-macos" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"Agents/Skills/BundledSkills/ruflo/agent-adaptive-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-agent/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-agentic-payments/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-analyze-code-quality/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-app-store/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-arch-system-design/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-architecture/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-authentication/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-automation-smart-agent/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-base-template-generator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-benchmark-suite/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-byzantine-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-challenges/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-code-analyzer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-code-goal-planner/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-code-review-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-coder/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-collective-intelligence-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-consensus-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-coordination/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-coordinator-swarm-init/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-crdt-synchronizer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-data-ml-model/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-dev-backend-api/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-docs-api-openapi/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-github-modes/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-github-pr-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-goal-planner/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-gossip-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-hierarchical-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-implementer-sparc-coder/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-issue-tracker/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-load-balancer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-matrix-optimizer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-memory-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-mesh-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-migration-plan/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-multi-repo-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-neural-network/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-ops-cicd-github/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-orchestrator-task/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-pagerank-analyzer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-payments/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-performance-analyzer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-performance-benchmarker/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-performance-monitor/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-performance-optimizer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-planner/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-pr-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-production-validator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-project-board-sync/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-pseudocode/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-queen-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-quorum-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-raft-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-refinement/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-release-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-release-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-repo-architect/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-researcher/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-resource-allocator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-reviewer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-safla-neural/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-sandbox/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-scout-explorer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-security-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-sona-learning-optimizer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-sparc-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-spec-mobile-react-native/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-specification/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-swarm-issue/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-swarm-memory-manager/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-swarm-pr/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-sync-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-tdd-london-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-test-long-runner/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-tester/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-topology-optimizer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-trading-predictor/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-user-tools/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-v3-integration-architect/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-v3-memory-specialist/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-v3-performance-engineer/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-v3-queen-coordinator/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-v3-security-architect/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-worker-specialist/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-workflow-automation/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agent-workflow/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentdb-advanced/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentdb-learning/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentdb-memory-patterns/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentdb-optimization/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentdb-vector-search/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/agentic-jujutsu/SKILL.md",
-				Agents/Skills/BundledSkills/ruflo/claims/SKILL.md,
-				Agents/Skills/BundledSkills/ruflo/embeddings/SKILL.md,
-				"Agents/Skills/BundledSkills/ruflo/flow-nexus-neural/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/flow-nexus-platform/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/flow-nexus-swarm/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-automation/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-code-review/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-multi-repo/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-project-management/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-release-management/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/github-workflow-automation/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/hive-mind-advanced/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/hive-mind/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/hooks-automation/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/memory-management/scripts/memory-backup.sh",
-				"Agents/Skills/BundledSkills/ruflo/memory-management/scripts/memory-consolidate.sh",
-				"Agents/Skills/BundledSkills/ruflo/memory-management/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/neural-training/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/pair-programming/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/performance-analysis/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/reasoningbank-agentdb/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/reasoningbank-intelligence/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/security-audit/scripts/cve-remediate.sh",
-				"Agents/Skills/BundledSkills/ruflo/security-audit/scripts/security-scan.sh",
-				"Agents/Skills/BundledSkills/ruflo/security-audit/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/skill-builder/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/sparc-methodology/scripts/sparc-init.sh",
-				"Agents/Skills/BundledSkills/ruflo/sparc-methodology/scripts/sparc-review.sh",
-				"Agents/Skills/BundledSkills/ruflo/sparc-methodology/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/stream-chain/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/swarm-advanced/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/swarm-orchestration/scripts/swarm-monitor.sh",
-				"Agents/Skills/BundledSkills/ruflo/swarm-orchestration/scripts/swarm-start.sh",
-				"Agents/Skills/BundledSkills/ruflo/swarm-orchestration/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-cli-modernization/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-core-implementation/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-ddd-architecture/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-integration-deep/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-mcp-optimization/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-memory-unification/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-performance-optimization/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-security-overhaul/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/v3-swarm-coordination/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/verification-quality/SKILL.md",
-				"Agents/Skills/BundledSkills/ruflo/worker-benchmarks/skill.md",
-				"Agents/Skills/BundledSkills/ruflo/worker-integration/skill.md",
-				"Agents/Skills/BundledSkills/ruflo/workflow-automation/SKILL.md",
-				Info.plist,
-			);
-			target = 28F22CBE2F56440300A0FC59 /* tiptour-macos */;
-		};
 		B626385D2FB2581000BDE96A /* Exceptions for "TipTourTests" folder in "tiptour-macosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -215,7 +64,6 @@
 		28F22CC12F56440300A0FC59 /* TipTour */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B626385A2FB2581000BDE96A /* Exceptions for "TipTour" folder in "tiptour-macos" target */,
 			);
 			path = TipTour;
 			sourceTree = "<group>";
@@ -264,7 +112,6 @@
 			isa = PBXGroup;
 			children = (
 				28F22CC12F56440300A0FC59 /* TipTour */,
-				B626385C2FB2581000BDE96A /* BundledSkills */,
 				28F22CCF2F56440300A0FC59 /* TipTourTests */,
 				28F22CD92F56440300A0FC59 /* TipTourUITests */,
 				28F22CC02F56440300A0FC59 /* Products */,
@@ -404,7 +251,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B626385B2FB2581000BDE96A /* BundledSkills in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

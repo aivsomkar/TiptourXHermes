@@ -22,7 +22,6 @@ struct TaskExecution: Sendable {
     var duration: TimeInterval
     var outcome: TaskOutcome
     var conversationHistory: [LLMMessage]
-    var autoSavedSkillSlug: String?
 }
 
 // MARK: - Efficiency evaluation result

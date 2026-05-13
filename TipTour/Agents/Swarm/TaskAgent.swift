@@ -23,12 +23,6 @@ actor TaskAgent: Identifiable {
     private(set) var backtrackCount: Int = 0
     private let startedAt: Date = Date()
     private var chatHistory: [AgentChatMessage] = []
-    private let skillHistoryBuffer: ToolCallHistoryBuffer
-    /// The on-disk slug used by `autoSaveSkill` for this run. Captured
-    /// AFTER `SkillLibraryStore.write` deduplicates, so EfficiencyMonitor's
-    /// self-critique rewrite lands on the exact file we wrote rather than
-    /// clobbering a sibling skill that happened to grab the base slug.
-    private var autoSavedSkillSlugForThisRun: String?
     /// Per-agent shell session. Lazily started on the first
     /// `interactive_shell` tool call; torn down by
     /// `markTerminated` / `handleCancellation`.
@@ -80,8 +74,6 @@ actor TaskAgent: Identifiable {
         self.taskType = taskType
         self.provider = provider
         self.swarmManager = swarmManager
-        let buffer = ToolCallHistoryBuffer()
-        self.skillHistoryBuffer = buffer
 
         // Per-agent workspace under Application Support so the
         // interactive shell's default cwd is an isolated playground.
@@ -95,7 +87,6 @@ actor TaskAgent: Identifiable {
 
         self.toolBox = ToolBox.build(
             for: taskType,
-            historyBuffer: buffer,
             interactiveShellSession: shellSession,
             workspaceURL: workspaceURL
         )
@@ -139,9 +130,8 @@ actor TaskAgent: Identifiable {
         print("[TaskAgent \(id.uuidString.prefix(8))] 🚀 starting type=\(taskType.rawValue) provider=\(providerId) task=\"\(taskDescription.prefix(80))\"")
 
         let memoryBlock = await fetchMemoryBlock()
-        let skillsBlock = await fetchSkillsBlock()
         conversationHistory = [
-            LLMMessage(role: .system, content: buildSystemPrompt(memoryBlock: memoryBlock, skillsBlock: skillsBlock)),
+            LLMMessage(role: .system, content: buildSystemPrompt(memoryBlock: memoryBlock)),
             LLMMessage(role: .user, content: taskDescription)
         ]
 
@@ -215,7 +205,6 @@ actor TaskAgent: Identifiable {
                     await recordStep(text, succeeded: true)
                     state = .completed
                     await writeTaskResultToMemory(summary: text)
-                    await autoSaveSkill(taskResult: text)
                     let successExecution = buildTaskExecution(outcome: .success(summary: text))
                     await scheduleEfficiencyEvaluation(successExecution)
                     await notifyMainAgentOfCompletion(summary: text)
@@ -586,13 +575,7 @@ actor TaskAgent: Identifiable {
 
     private func dispatchToolCall(_ toolCall: LLMToolCall) async -> String {
         toolCallCount += 1
-        let result = await toolBox.execute(toolCall: toolCall)
-        skillHistoryBuffer.append(RecordedToolCall(
-            toolName: toolCall.name,
-            argumentsJSON: toolCall.argumentsJSON,
-            result: result
-        ))
-        return result
+        return await toolBox.execute(toolCall: toolCall)
     }
 
     /// Outcome of running a batch of tool calls in sequence.
@@ -702,39 +685,6 @@ actor TaskAgent: Identifiable {
         return "--- Relevant memory ---\n\(lines)\n---"
     }
 
-    /// Queries the shared skill library for skills relevant to this task,
-    /// returning a formatted block to prepend to the system prompt.
-    /// Returns an empty string when no relevant skills exist.
-    ///
-    /// The library is seeded at app launch with ~150 prompts from RuFlo
-    /// (SPARC, DDD, GitHub workflows, security audit, etc.) and OpenWork
-    /// (OpenCode primitives, browser-setup, release flow, etc.). The
-    /// query scores entries by taskType match + keyword overlap, so the
-    /// agent receives only the slugs most relevant to its current task —
-    /// not the whole 150-skill catalog. The agent can then call
-    /// `recall_skill` to fetch the full body of any listed slug before
-    /// acting.
-    private func fetchSkillsBlock() async -> String {
-        let skills = await SkillLibraryStore.shared.query(
-            taskDescription: taskDescription,
-            taskTypes: [taskType]
-        )
-        guard !skills.isEmpty else { return "" }
-        let lines = skills.enumerated().map { index, entry in
-            "\(index + 1). \(entry.slug): \(entry.description)"
-        }.joined(separator: "\n")
-        return """
-        --- Relevant skills (call `recall_skill(slug)` to read the full body) ---
-        \(lines)
-        ---
-        Each entry above is a battle-tested prompt pattern from RuFlo or \
-        OpenWork. When a listed skill matches your subtask, fetch its body \
-        and follow its method before improvising — these embody methodologies \
-        like SPARC, TDD, security audit, that produce better outcomes than \
-        free-form work.
-        """
-    }
-
     /// Writes a task-result entry to the shared memory store summarising what this agent did.
     /// Called on completion (success or error). Skipped only for terminated agents.
     private func writeTaskResultToMemory(summary: String) async {
@@ -758,52 +708,13 @@ actor TaskAgent: Identifiable {
             stepsExecuted: stepHistory.count,
             duration: Date().timeIntervalSince(startedAt),
             outcome: outcome,
-            conversationHistory: conversationHistory,
-            // Use the post-dedup slug from autoSaveSkill so the
-            // efficiency monitor's rewrite lands on the file we
-            // actually wrote, not a sibling.
-            autoSavedSkillSlug: autoSavedSkillSlugForThisRun
+            conversationHistory: conversationHistory
         )
     }
 
-    /// Auto-saves a skill to the shared skill library after a successful task completion.
-    /// Only saves when the agent meaningfully used tools — pure text
-    /// responses, or runs where the only tool calls were `recall_*` /
-    /// `remember_*` (shared memory plumbing), don't produce reusable
-    /// skills worth storing.
-    private func autoSaveSkill(taskResult: String) async {
-        let toolCalls = skillHistoryBuffer.calls
-        guard !toolCalls.isEmpty else { return }
-        // Don't pollute the skill library with runs whose only tool
-        // calls were memory/skill metadata reads. Those aren't
-        // reusable "how-to" sequences — they're just bookkeeping.
-        let memoryOnlyToolNames: Set<String> = [
-            "remember_fact", "recall_facts", "save_skill", "recall_skill"
-        ]
-        let hasDomainToolCall = toolCalls.contains { !memoryOnlyToolNames.contains($0.toolName) }
-        guard hasDomainToolCall else { return }
-
-        let baseSlug = SkillLibraryStore.generateSlug(from: taskDescription)
-        let body = SkillBodyBuilder.build(
-            name: taskDescription,
-            toolCalls: toolCalls,
-            resultSummary: taskResult
-        )
-        // Capture the post-dedup slug so EfficiencyMonitor can find
-        // this exact file when it wants to rewrite it.
-        autoSavedSkillSlugForThisRun = await SkillLibraryStore.shared.write(
-            slug: baseSlug,
-            name: taskDescription,
-            description: String(taskResult.prefix(120)),
-            taskTypes: [taskType],
-            body: body
-        )
-    }
-
-    private func buildSystemPrompt(memoryBlock: String, skillsBlock: String) -> String {
+    private func buildSystemPrompt(memoryBlock: String) -> String {
         var extras = ""
         if !memoryBlock.isEmpty { extras += "\n\(memoryBlock)" }
-        if !skillsBlock.isEmpty { extras += "\n\(skillsBlock)" }
         return """
         You are a background task agent running inside TipTour, a macOS AI assistant.
         Your task type: \(taskType.displayName)

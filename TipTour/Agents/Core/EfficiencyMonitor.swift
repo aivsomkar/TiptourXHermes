@@ -99,16 +99,9 @@ actor EfficiencyMonitor {
             }
 
             let diagnosis = extractXMLTag("diagnosis", from: responseText)
-            let improvedSkill = extractXMLTag("improved_skill", from: responseText)
             let lesson = extractXMLTag("lesson", from: responseText)
 
-            async let _skillWrite: Void = rewriteSkillIfNeeded(
-                execution: execution, improvedSkill: improvedSkill, diagnosis: diagnosis
-            )
-            async let _memoryWrite: Void = writeLessonIfNeeded(
-                execution: execution, lesson: lesson
-            )
-            _ = await (_skillWrite, _memoryWrite)
+            await writeLessonIfNeeded(execution: execution, lesson: lesson)
 
             return EfficiencyReport(
                 inefficiencyScore: inefficiencyScore,
@@ -125,21 +118,6 @@ actor EfficiencyMonitor {
                 diagnosis: "",
                 didSelfCritique: false
             )
-        }
-    }
-
-    private func rewriteSkillIfNeeded(execution: TaskExecution, improvedSkill: String, diagnosis: String) async {
-        guard let slug = execution.autoSavedSkillSlug, !improvedSkill.isEmpty else { return }
-        let body = "# \(execution.taskDescription)\n\n## Steps\n\n\(improvedSkill)\n\n## Result\n\nSelf-critiqued procedure."
-        // Use updateBody — NOT write — so we rewrite the exact file
-        // autoSaveSkill produced. Calling write() here would re-run
-        // the dedup pass and either clobber a sibling skill that owns
-        // the base slug, or spawn a `-2`/`-3` orphan.
-        let didUpdate = await SkillLibraryStore.shared.updateBody(slug: slug, body: body)
-        if !didUpdate {
-            // The auto-saved skill is gone (user cleared the library
-            // between the agent run and now). Nothing to rewrite.
-            print("[EfficiencyMonitor] skipped skill rewrite — slug '\(slug)' not in library")
         }
     }
 
