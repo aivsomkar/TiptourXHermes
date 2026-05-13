@@ -50,7 +50,7 @@ final class CompanionManager: ObservableObject {
     @Published private(set) var isOverlayVisible: Bool = false
 
     // MARK: - Skill Demonstration (removed — to be re-routed through HermesClient)
-    // TODO(plan-2): re-introduce demonstration recording via HermesClient if needed.
+    // future: skill capture / demonstration recording — not in Plan 3c scope
 
     let globalPushToTalkShortcutMonitor = GlobalPushToTalkShortcutMonitor()
     let overlayWindowManager = OverlayWindowManager()
@@ -88,9 +88,6 @@ final class CompanionManager: ObservableObject {
     /// hermesClient before the first send so Hermes registers the MCP
     /// server during session/new.
     let mcpServer = MCPServer(name: "tiptour-tools")
-
-    // TODO(plan-2): route background-agent state through HermesClient.
-    private var pendingAgentCompletionNotices: [String] = []
 
     /// True when all four required permissions (accessibility, screen recording,
     /// microphone, screen content) are granted. Used by the panel to show a single "all good" state.
@@ -251,7 +248,6 @@ final class CompanionManager: ObservableObject {
         }
         handledToolCallIDsThisUtterance.insert(id)
 
-        // TODO(plan-2): re-implement workflow short-circuit via HermesClient session state.
         let capture = voiceBackend.latestCapture
         let hintInScreenshotPixels = pixelHintFromBox2D(
             box2DNormalized: box2DNormalized,
@@ -460,9 +456,6 @@ final class CompanionManager: ObservableObject {
         beginTrackingUserTargetApp()
         ClickDetector.advanceOnAnyClickEnabled = advanceOnAnyClickEnabled
 
-        // TODO(plan-2): re-wire background-agent stream and
-        // provider/skill/memory bootstrap through HermesClient.
-
         // If the user already completed onboarding AND all permissions are
         // still granted, show the cursor overlay immediately. If permissions
         // were revoked (e.g. signing change), don't show the cursor — the
@@ -473,41 +466,6 @@ final class CompanionManager: ObservableObject {
             isOverlayVisible = true
         }
     }
-
-    /// Route an agent-swarm notice (completion summary, failure,
-    /// blocker) either into the active voice session immediately, or
-    /// onto the pending-notice queue if no session is open. The user
-    /// shouldn't have to start a new session to hear that the agent
-    /// they asked about a minute ago finished — Gemini gets the text
-    /// in-band the moment it arrives.
-    @MainActor
-    private func deliverAgentNoticeToVoiceSession(_ notice: String) {
-        guard voiceBackend.isActive else {
-            // No live session — queue for the next session start. The
-            // drain runs in injectPendingAgentCompletionNoticesIfNeeded.
-            pendingAgentCompletionNotices.append(notice)
-            return
-        }
-        // Don't barge in if either party is mid-utterance. Sending a
-        // clientContent text turn while the model is speaking would
-        // interrupt its current response; sending while the user is
-        // talking would race their utterance and confuse Gemini.
-        // Queue for the next idle window instead.
-        if voiceBackend.isModelSpeaking || !voiceBackend.inputTranscript.isEmpty {
-            pendingAgentCompletionNotices.append(notice)
-            print("[CompanionManager] queued agent notice — session busy (model speaking or user mid-utterance)")
-            return
-        }
-        let contextMessage = """
-            Background-agent update (just arrived; do not bring this up unprompted, but mention it if the user asks what your agents are up to):
-            \(notice)
-            """
-        voiceBackend.sendText(contextMessage)
-        print("[CompanionManager] forwarded live agent notice into active voice session")
-    }
-
-    // TODO(plan-2): re-introduce background-agent spawn and skill
-    // demonstration capture via HermesClient.
 
     func stop() {
         mcpServer.stop()
@@ -618,8 +576,7 @@ final class CompanionManager: ObservableObject {
                 self?.handleShortcutTransition(transition)
             }
 
-        // TODO(plan-2): re-wire demonstration shortcut once the
-        // skill capture path is reintroduced via HermesClient.
+        // future: demonstration shortcut (Ctrl+Option+W) publisher exists with no consumer
         _ = globalPushToTalkShortcutMonitor.demonstrationShortcutPublisher
     }
 
@@ -868,8 +825,6 @@ user: "log in to my bank"
 
     // MARK: - Gemini Live Mode
 
-    // TODO(plan-2): workflow execution now routes through HermesClient.
-
     /// Start a Gemini Live session on hotkey press. Two things run in
     /// parallel from the instant the hotkey fires:
     ///   1. WebSocket open + Gemini session setup (~300-500ms)
@@ -892,39 +847,11 @@ user: "log in to my bank"
         Task {
             do {
                 try await voiceBackend.start(initialScreenshot: nil)
-                // TODO(plan-2): re-inject pending background-agent
-                // notices and live status via HermesClient.
-                await injectPendingAgentCompletionNoticesIfNeeded()
             } catch {
                 print("[GeminiLive] Failed to start session: \(error.localizedDescription)")
             }
         }
     }
-
-    /// Drain any agent completion / failure / blocker notices that
-    /// arrived while no voice session was open, and inject them as a
-    /// single text turn so Gemini can narrate "while you were away,
-    /// the camera-research agent finished" on the next user utterance.
-    /// Notices are consumed (removed from the pending queue) so
-    /// subsequent sessions don't repeat them.
-    private func injectPendingAgentCompletionNoticesIfNeeded() async {
-        guard !pendingAgentCompletionNotices.isEmpty else { return }
-        let notices = pendingAgentCompletionNotices
-        pendingAgentCompletionNotices.removeAll()
-
-        let lines = notices.map { "• \($0)" }.joined(separator: "\n")
-        let contextMessage = """
-            While we were apart, the following background agents reported in:
-            \(lines)
-            If the user asks what happened, narrate this in your own words. \
-            Do NOT bring it up unprompted — only when they ask or it's relevant.
-            """
-        voiceBackend.sendText(contextMessage)
-        print("[CompanionManager] Drained \(notices.count) pending agent notice(s) into new session")
-    }
-
-    // TODO(plan-2): re-introduce live background-agent status injection
-    // via HermesClient.
 
     /// Walk the user's target app AX tree to prime caches so the first
     /// `point_at_element` resolves against warm data. The set-of-marks
@@ -947,7 +874,6 @@ user: "log in to my bank"
 
     /// End the Gemini Live session.
     func stopVoiceSession() {
-        // TODO(plan-2): tell HermesClient to abandon any in-flight plan.
         voiceBackend.stop()
     }
 }
