@@ -68,4 +68,19 @@ final class HermesClientTests: XCTestCase {
         XCTAssertFalse(client.isWorking)
         client.stop()
     }
+
+    @MainActor
+    func testLiveToolUsingPromptPopulatesToolCalls() async throws {
+        try XCTSkipUnless(hermesConfiguredLocally(),
+                          "Hermes not configured locally")
+        let client = HermesClient()
+        await client.send("Use the shell tool to print 'plan2 ok'. Do not summarise.")
+        let agent = client.transcript.first { if case .agent = $0 { return true } else { return false } }
+        XCTAssertNotNil(agent)
+        if case .agent(_, _, let toolCalls) = agent {
+            XCTAssertFalse(toolCalls.isEmpty,
+                           "expected at least one tool call when prompted to use a tool")
+        }
+        client.stop()
+    }
 }

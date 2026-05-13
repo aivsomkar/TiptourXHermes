@@ -250,16 +250,60 @@ final class HermesClient: ObservableObject {
             return
         }
         if let method = envelope.method, envelope.id == nil {
-            // Server-to-client notification — typically session/update.
             handleNotification(method: method, line: line)
         } else if envelope.method == nil, let id = envelope.id {
-            // Response to a request we made.
             if let cont = pendingResponses.removeValue(forKey: id) {
                 cont.resume(returning: line)
             }
-        } else if envelope.method != nil, envelope.id != nil {
-            // Server-to-client REQUEST (e.g. session/request_permission).
-            // Task 7 implements the auto-allow response.
+        } else if let method = envelope.method, let id = envelope.id {
+            // Server-initiated request. The only one we expect today is
+            // session/request_permission. Auto-allow for Plan 2; Plan 4
+            // replaces this with real approval UI.
+            handleServerRequest(id: id, method: method, line: line)
+        }
+    }
+
+    private func handleServerRequest(id: String, method: String, line: Data) {
+        guard method == "session/request_permission" else {
+            // Unknown server-initiated request — reply with method_not_found
+            // so Hermes doesn't hang waiting.
+            writeMethodNotFound(id: id, method: method)
+            return
+        }
+        // Parse the tool name (best-effort) for logging.
+        var toolName = "<unknown>"
+        if let any = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+           let params = any["params"] as? [String: Any],
+           let tc = params["toolCall"] as? [String: Any],
+           let name = tc["name"] as? String {
+            toolName = name
+        }
+        NSLog("⚠️ auto-allowed: %@", toolName)
+        let resp = PermissionResponse(outcome: PermissionOutcome(outcome: "selected", optionId: "allow"))
+        writeResponse(id: id, result: resp)
+    }
+
+    private func writeResponse<R: Encodable>(id: String, result: R) {
+        // Build a raw JSON object to avoid the "nested generic struct" restriction.
+        guard let resultData = try? JSONEncoder().encode(result),
+              let resultJSON = try? JSONSerialization.jsonObject(with: resultData) else { return }
+        let envelope: [String: Any] = ["jsonrpc": "2.0", "id": id, "result": resultJSON]
+        guard let data = try? JSONSerialization.data(withJSONObject: envelope),
+              let stdin = stdinPipe?.fileHandleForWriting else { return }
+        try? stdin.write(contentsOf: data + Data("\n".utf8))
+    }
+
+    private func writeMethodNotFound(id: String, method: String) {
+        struct Err: Encodable { let code = -32601; let message: String }
+        struct Envelope: Encodable {
+            let jsonrpc = "2.0"
+            let id: String
+            let error: Err
+        }
+        let env = Envelope(id: id, error: Err(message: "method_not_found: \(method)"))
+        if let data = try? JSONEncoder().encode(env),
+           let stdin = stdinPipe?.fileHandleForWriting {
+            try? stdin.write(contentsOf: data + Data("\n".utf8))
         }
     }
 
@@ -277,13 +321,76 @@ final class HermesClient: ObservableObject {
         switch update {
         case .agentMessageChunk(let text):
             currentAgentTurn?.text.append(text)
+
         case .userMessageChunk:
-            break       // echoes of the user's own input; nothing to do
-        case .toolCallStart, .toolCallProgress, .toolCallEnd:
-            break       // Task 7
+            break
+
+        case .toolCallStart(let id, let name, let args, _):
+            let preview = Self.makeArgsPreview(name: name, args: args)
+            let full = Self.makeArgsFull(args: args)
+            let record = ToolCallRecord(
+                id: id, name: name,
+                argsPreview: preview, argsFull: full,
+                status: .pending
+            )
+            currentAgentTurn?.toolCalls.append(record)
+
+        case .toolCallProgress(let id, let status, _):
+            updateToolCallStatus(id: id, hermesStatus: status)
+
+        case .toolCallEnd(let id, let status):
+            updateToolCallStatus(id: id, hermesStatus: status)
+
         case .availableCommandsUpdate, .usageUpdate, .unknown:
             break
         }
+    }
+
+    private func updateToolCallStatus(id: String, hermesStatus: String) {
+        guard var turn = currentAgentTurn,
+              let idx = turn.toolCalls.firstIndex(where: { $0.id == id }) else { return }
+        let mapped: ToolCallRecord.Status
+        switch hermesStatus.lowercased() {
+        case "completed", "success", "ok": mapped = .completed
+        case "failed", "error":            mapped = .failed
+        default:                           mapped = .pending
+        }
+        turn.toolCalls[idx].status = mapped
+        currentAgentTurn = turn
+    }
+
+    private static func makeArgsPreview(name: String, args: JSONValue) -> String {
+        // Compact `name(key=val, …)` summary. Keep it short — full args
+        // are available in argsFull.
+        guard case .object(let dict) = args else { return "\(name)(…)" }
+        let parts = dict.prefix(2).map { key, value -> String in
+            let v = preview(of: value)
+            return "\(key)=\(v)"
+        }
+        let suffix = dict.count > 2 ? ", …" : ""
+        return "\(name)(\(parts.joined(separator: ", "))\(suffix))"
+    }
+
+    private static func preview(of value: JSONValue) -> String {
+        switch value {
+        case .string(let s):
+            let trimmed = s.count > 40 ? String(s.prefix(40)) + "…" : s
+            return "\"\(trimmed)\""
+        case .number(let n):  return "\(n)"
+        case .bool(let b):    return "\(b)"
+        case .null:           return "null"
+        case .array(let a):   return "[…\(a.count) items]"
+        case .object:         return "{…}"
+        }
+    }
+
+    private static func makeArgsFull(args: JSONValue) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(args),
+              let text = String(data: data, encoding: .utf8)
+        else { return "(unrepresentable)" }
+        return text
     }
 
     private struct FrameEnvelope: Decodable {
