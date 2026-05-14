@@ -47,6 +47,19 @@ final class HermesClient: ObservableObject {
     // MARK: Public API
 
     func send(_ userText: String) async {
+        // Serialize concurrent send() calls so we never have two
+        // session/prompt requests in flight on one Hermes session. See
+        // `sendQueueTail` doc for why.
+        let prior = sendQueueTail
+        let task = Task { [weak self] in
+            _ = await prior?.value
+            await self?.actualSend(userText)
+        }
+        sendQueueTail = task
+        _ = await task.value
+    }
+
+    private func actualSend(_ userText: String) async {
         transcript.append(.user(id: UUID(), text: userText))
 
         if sessionId == nil {
@@ -146,6 +159,14 @@ final class HermesClient: ObservableObject {
 
     // MARK: Internal state
     private let hermesHomeOverride: URL?
+    /// Tail of the serial send queue. Each `send(_:)` chains itself after
+    /// this task and replaces it, so concurrent callers (voice ask_hermes
+    /// + chat window, or two rapid ask_hermes calls) hit Hermes's
+    /// session/prompt one at a time. Without this serialisation, Hermes
+    /// Agent's session-level prompt queue kicks in and replies with the
+    /// literal text "Queued for the next turn. (1 queued)" — which Gemini
+    /// then speaks aloud as a real answer.
+    private var sendQueueTail: Task<Void, Never>?
     private var process: Process?
     private var stdoutPipe: Pipe?
     private var stdinPipe: Pipe?
