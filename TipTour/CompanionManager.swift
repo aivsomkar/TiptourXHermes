@@ -126,6 +126,20 @@ final class CompanionManager: ObservableObject {
         backend.onAskHermes = { [weak self] id, task in
             await self?.handleToolAskHermes(id: id, task: task) ?? ["ok": false, "error": "manager_gone"]
         }
+        backend.onClickElement = { [weak self] id, label, box2DNormalized, screenshotJPEG in
+            await self?.handleToolClickElement(
+                id: id,
+                label: label,
+                box2DNormalized: box2DNormalized,
+                screenshotJPEG: screenshotJPEG
+            ) ?? ["ok": false, "error": "manager_gone"]
+        }
+        backend.onTypeText = { [weak self] id, text in
+            await self?.handleToolTypeText(id: id, text: text) ?? ["ok": false, "error": "manager_gone"]
+        }
+        backend.onPressKeyboardShortcut = { [weak self] id, shortcut in
+            await self?.handleToolPressKeyboardShortcut(id: id, shortcut: shortcut) ?? ["ok": false, "error": "manager_gone"]
+        }
         backend.onInputTranscriptUpdate = { [weak self] fullInputTranscript in
             guard let self else { return }
             let isNewUtterance = fullInputTranscript.trimmingCharacters(in: .whitespacesAndNewlines).count > 0
@@ -310,6 +324,170 @@ final class CompanionManager: ObservableObject {
         return ["ok": true, "text": replyText]
     }
 
+    /// How long the voice-mode click handler waits between starting the
+    /// cursor flight and posting the actual HID click. Mirrors
+    /// `ClickElementMCPTool.preClickFlightSettleSeconds` so the visual
+    /// cadence feels identical between Hermes-driven and Gemini-driven
+    /// clicks.
+    private static let voiceClickPreFlightSettleSeconds: Double = 1.1
+
+    /// Handle the `click_element` tool call from Gemini Live. Resolves the
+    /// label exactly like `point_at_element` does (AX tree → Gemini box_2d),
+    /// visibly flies the cursor, settles, then posts a real HID click via
+    /// `ActionExecutor`. Gated by `hermesGUIAutopilotEnabled` — when the
+    /// user hasn't opted in we return a structured error so Gemini explains
+    /// the situation in voice instead of clicking anyway.
+    @MainActor
+    private func handleToolClickElement(
+        id: String,
+        label: String,
+        box2DNormalized: [Int]?,
+        screenshotJPEG: Data?
+    ) async -> [String: Any] {
+        if handledToolCallIDsThisUtterance.contains(id) {
+            print("[Tool] ⏭️  ignoring duplicate click_element id=\(id)")
+            return ["ok": true, "duplicate": true]
+        }
+        handledToolCallIDsThisUtterance.insert(id)
+
+        guard hermesGUIAutopilotEnabled else {
+            print("[Tool] 🚫 click_element refused — autopilot disabled")
+            return [
+                "ok": false,
+                "error": "autopilot_disabled",
+                "message": "I can't click for you yet. Open the menu bar panel, expand the Dev section, and toggle on \"Hermes can drive my Mac\" to give me permission. Then ask me again."
+            ]
+        }
+
+        let capture = voiceBackend.latestCapture
+        let hintInScreenshotPixels = pixelHintFromBox2D(
+            box2DNormalized: box2DNormalized,
+            capture: capture
+        )
+        print("[Tool] 🔧 click_element(label=\"\(label)\", box_2d=\(box2DNormalized ?? []))")
+
+        let startedAt = Date()
+        let resolution = await ElementResolver.shared.resolve(
+            label: label,
+            llmHintInScreenshotPixels: hintInScreenshotPixels,
+            latestCapture: capture
+        )
+        let elapsed = Int(Date().timeIntervalSince(startedAt) * 1000)
+        guard let resolution else {
+            print("[Tool] ✗ click_element(\"\(label)\") → no match after \(elapsed)ms")
+            voiceBackend.invalidateScreenshotHashCache()
+            return ["ok": false, "reason": "element_not_found", "label": label]
+        }
+        print("[Tool] ✓ click_element(\"\(label)\") → \(resolution.label) via \(resolution.source) in \(elapsed)ms — flying then clicking")
+
+        // Visible cursor flight, same path as point_at_element.
+        pointAtResolution(resolution)
+
+        // Let the bezier arc land before posting the click so the user has
+        // a clear "about to click here" preview.
+        try? await Task.sleep(nanoseconds: UInt64(Self.voiceClickPreFlightSettleSeconds * 1_000_000_000))
+
+        // Activate the user's target app (captured at hotkey press) so the
+        // synthesised click lands in the right window rather than TipTour's
+        // own panel. CGEventPostToPid is unreliable per Apple Forum 724835;
+        // explicit activation + HID post is the working path.
+        let targetApp = AccessibilityTreeResolver.userTargetAppOverride
+
+        do {
+            try await ActionExecutor.shared.click(
+                atGlobalScreenPoint: resolution.globalScreenPoint,
+                activatingTargetApp: targetApp
+            )
+        } catch {
+            clearDetectedElementLocation()
+            print("[Tool] ✗ click_element(\"\(label)\") → CGEvent post failed: \(error.localizedDescription)")
+            return [
+                "ok": false,
+                "error": "click_failed",
+                "message": error.localizedDescription
+            ]
+        }
+
+        clearDetectedElementLocation()
+        voiceBackend.suppressScreenshotsUntilUserSpeaks()
+
+        return [
+            "ok": true,
+            "label": resolution.label,
+            "source": String(describing: resolution.source)
+        ]
+    }
+
+    /// Handle the `type_text` tool call from Gemini Live. Pastes the text
+    /// into whatever currently has keyboard focus via
+    /// `ActionExecutor.typeText`. Gated by `hermesGUIAutopilotEnabled`.
+    @MainActor
+    private func handleToolTypeText(id: String, text: String) async -> [String: Any] {
+        if handledToolCallIDsThisUtterance.contains(id) {
+            print("[Tool] ⏭️  ignoring duplicate type_text id=\(id)")
+            return ["ok": true, "duplicate": true]
+        }
+        handledToolCallIDsThisUtterance.insert(id)
+
+        guard hermesGUIAutopilotEnabled else {
+            print("[Tool] 🚫 type_text refused — autopilot disabled")
+            return [
+                "ok": false,
+                "error": "autopilot_disabled",
+                "message": "I can't type for you yet. Toggle on \"Hermes can drive my Mac\" in the menu bar panel's Dev section, then ask me again."
+            ]
+        }
+
+        print("[Tool] 🔧 type_text(text.count=\(text.count))")
+        let targetApp = AccessibilityTreeResolver.userTargetAppOverride
+        do {
+            try await ActionExecutor.shared.typeText(text, activatingTargetApp: targetApp)
+        } catch {
+            print("[Tool] ✗ type_text failed: \(error.localizedDescription)")
+            return [
+                "ok": false,
+                "error": "type_failed",
+                "message": error.localizedDescription
+            ]
+        }
+        return ["ok": true, "characters": text.count]
+    }
+
+    /// Handle the `press_keyboard_shortcut` tool call from Gemini Live.
+    /// Posts the chord at HID level via `ActionExecutor.pressKeyboardShortcut`.
+    /// Gated by `hermesGUIAutopilotEnabled`.
+    @MainActor
+    private func handleToolPressKeyboardShortcut(id: String, shortcut: String) async -> [String: Any] {
+        if handledToolCallIDsThisUtterance.contains(id) {
+            print("[Tool] ⏭️  ignoring duplicate press_keyboard_shortcut id=\(id)")
+            return ["ok": true, "duplicate": true]
+        }
+        handledToolCallIDsThisUtterance.insert(id)
+
+        guard hermesGUIAutopilotEnabled else {
+            print("[Tool] 🚫 press_keyboard_shortcut refused — autopilot disabled")
+            return [
+                "ok": false,
+                "error": "autopilot_disabled",
+                "message": "I can't press keys for you yet. Toggle on \"Hermes can drive my Mac\" in the menu bar panel's Dev section, then ask me again."
+            ]
+        }
+
+        print("[Tool] 🔧 press_keyboard_shortcut(\"\(shortcut)\")")
+        let targetApp = AccessibilityTreeResolver.userTargetAppOverride
+        do {
+            try await ActionExecutor.shared.pressKeyboardShortcut(shortcut, activatingTargetApp: targetApp)
+        } catch {
+            print("[Tool] ✗ press_keyboard_shortcut failed: \(error.localizedDescription)")
+            return [
+                "ok": false,
+                "error": "shortcut_failed",
+                "message": error.localizedDescription
+            ]
+        }
+        return ["ok": true, "shortcut": shortcut]
+    }
+
     /// Set of tool-call IDs we've already dispatched within the current
     /// user utterance. Reset when a new user utterance starts.
     private var handledToolCallIDsThisUtterance: Set<String> = []
@@ -340,6 +518,25 @@ final class CompanionManager: ObservableObject {
     func setNekoModeEnabled(_ enabled: Bool) {
         isNekoModeEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "isNekoModeEnabled")
+    }
+
+    /// Master gate for Hermes' destructive MCP tools (click_element,
+    /// type_text, press_keyboard_shortcut). When false, those tools
+    /// throw `MCPToolError.toolFailed` immediately so Hermes never
+    /// drives the user's mouse/keyboard without explicit consent.
+    ///
+    /// Defaults to false on a fresh install. Persisted to UserDefaults
+    /// so it survives app restarts.
+    ///
+    /// Replaced by `GuardrailsDecider` once Plan 6 (Guardrails) lands —
+    /// see `docs/superpowers/plans/2026-05-14-plan-7-hermes-mcp-gui-autopilot.md`
+    /// Task 8 for the migration steps.
+    @Published private(set) var hermesGUIAutopilotEnabled: Bool =
+        UserDefaults.standard.bool(forKey: "hermesGUIAutopilotEnabled")
+
+    func setHermesGUIAutopilotEnabled(_ enabled: Bool) {
+        hermesGUIAutopilotEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "hermesGUIAutopilotEnabled")
     }
 
     // MARK: - Onboarding
@@ -415,6 +612,9 @@ final class CompanionManager: ObservableObject {
             mcpServer.register(ScreenshotTool())
             mcpServer.register(A11yTreeTool(resolver: resolver))
             mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
+            mcpServer.register(ClickElementMCPTool(resolver: resolver, companionManager: self))
+            mcpServer.register(TypeTextMCPTool(companionManager: self))
+            mcpServer.register(PressKeyboardShortcutMCPTool(companionManager: self))
             do {
                 let url = try mcpServer.start()
                 hermesClient.mcpServerURL = url
@@ -692,7 +892,7 @@ SILENCE-AT-CONNECT RULE (CRITICAL — read every time):
 when a session begins, you are silent AND inert. you wait. do NOT greet the user. do NOT say "hi" / "hello" / "i see you have X" / "how can i help". do NOT comment on what's on screen. do NOT narrate anything you see in incoming screenshots. screenshots arriving on their own are NOT a prompt to speak — they're just visual context for when the user eventually does speak. the very first thing you say in this session must be a direct response to the user's actual VOICE — words you heard them speak through the microphone. background noise, breathing, mouse clicks, keyboard taps, room sound, music, or ambient audio are NOT user input — ignore them and stay silent. if the input transcript is empty or contains only non-speech sounds, you stay silent. never speak first.
 
 NO-TOOL-CALLS-BEFORE-USER-SPEECH RULE (CRITICAL — read every time):
-silence-at-connect applies to TOOLS as well as speech. do NOT call point_at_element, ask_hermes, or any other tool before the user has spoken in this session. screenshots, ambient noise, on-screen UI changes are NOT triggers to act. they are passive context. acting on them flies the cursor to random elements and reads to the user as "the app is broken / doing things on its own". if you find yourself about to call a tool and the user has not yet spoken in this session, STOP — do not call the tool. the server will refuse it with error=no_user_speech_yet anyway. wait for the user's first real utterance, then act in response to it.
+silence-at-connect applies to TOOLS as well as speech. do NOT call point_at_element, click_element, type_text, press_keyboard_shortcut, ask_hermes, or any other tool before the user has spoken in this session. screenshots, ambient noise, on-screen UI changes are NOT triggers to act. they are passive context. acting on them flies the cursor to random elements and reads to the user as "the app is broken / doing things on its own". if you find yourself about to call a tool and the user has not yet spoken in this session, STOP — do not call the tool. the server will refuse it with error=no_user_speech_yet anyway. wait for the user's first real utterance, then act in response to it.
 
 GREETING-ONLY RULE (CRITICAL — read every time):
 if the user's utterance is just a greeting ("hi", "hey", "hello", "yo", "what's up", "good morning", etc.) and contains no actual question or request, respond with a brief greeting back ("hey", "hi there", "what's up") and STOP. do NOT volunteer information about what's on screen. do NOT call any tool. do NOT mention menus, buttons, or anything visible. wait for the user to ask an actual question. screen content is reference material for when the user asks about it — never narrate it unprompted, even right after a greeting.
@@ -713,12 +913,26 @@ rules:
 
 tools (VERY IMPORTANT — read carefully):
 
-you have exactly TWO tools. call AT MOST ONE tool per turn.
+you have FIVE tools. call AT MOST ONE tool per turn.
+
+POINTING vs. CLICKING — pick the right verb:
+- if the user asks "where is X" / "point at X" / "show me X" → point_at_element. PURELY visual.
+- if the user asks "click X" / "open X" / "press X" / "tap X" / "activate X" → click_element. ACTUALLY presses the button.
+- never point when the user asked you to click, and never click when they only asked to point.
 
 TOOL: point_at_element(label, box_2d?)
   use for a SINGLE visible element. examples: "where's the save button", "point at the color inspector", "what is this tab".
   label = literal visible text on screen.
   box_2d = OPTIONAL bounding box in [y1, x1, y2, x2] form, each value in [0, 1000] normalized to the screenshot. origin top-left, y first. include this whenever you can — it's how this model is natively trained to localize. ALWAYS include it for apps without accessibility (Blender, games, canvas tools) and whenever the label is ambiguous.
+
+TOOL: click_element(label, box_2d?)
+  actually CLICK a visible element. the cursor flies there visibly first so the user sees the target, then the click fires. same label/box_2d shape as point_at_element. examples: "click the reload button", "open the file menu", "press save". if the user has not enabled "Hermes can drive my Mac", this returns an autopilot_disabled error — speak the returned message verbatim so the user knows how to opt in.
+
+TOOL: type_text(text)
+  type into whatever currently has keyboard focus. usually preceded by click_element on the target field. examples: "type my email", "fill in 'hello world'". returns autopilot_disabled if the user hasn't opted in.
+
+TOOL: press_keyboard_shortcut(shortcut)
+  press a chord like "Cmd+S", "Cmd+Shift+T", "Return", "Esc". examples: "save this", "close this tab with cmd+w", "hit return", "press escape". returns autopilot_disabled if the user hasn't opted in.
 
 UI ELEMENT HINTS (set-of-marks):
 alongside screenshots you will sometimes receive a "UI elements on screen" message listing pointable elements as [role:label] tokens — for example [button:Save] [menu:File] [item:New File...] [tab:Preview] [field:Search].
@@ -757,9 +971,12 @@ TOOL: ask_hermes(task)
 ABSOLUTE RULES — pick by USER INTENT:
 
 1. user wants to be SHOWN a single thing on screen — "where is", "point at", "what is this": → point_at_element (stay silent before the call, speak ONCE after)
-2. user wants deep work — coding, research, writing, multi-step reasoning, file operations, shell: → ask_hermes (speak 2-3 natural sentences of ack before the call to cover the wait, speak hermes's answer after)
-3. user asks you to REMEMBER, SAVE, NOTE, or TRACK something — "remember X", "save this", "keep track of Y", "don't forget Z", "for later: X": → ask_hermes(task: "remember for the user: <X>"). this is critical — hermes is the shared memory store. anything the user wants you to recall later MUST go through ask_hermes so it persists into the chat window too. casual "i'm gonna do X tomorrow" mentions don't count — only explicit ask-to-remember.
-4. pure knowledge / chit-chat → no tool, just speak.
+2. user wants you to ACT on the UI — "click X", "open X", "press X", "activate X": → click_element (speak ONE short ack like "on it" before the call, ONE short ack after — the cursor flight is visible feedback)
+3. user wants you to TYPE something — "type Y into the box", "fill the field with Z": → type_text (call click_element first if the target field isn't focused)
+4. user wants a keyboard shortcut fired — "save with cmd+s", "close this tab", "hit return": → press_keyboard_shortcut
+5. user wants deep work — coding, research, writing, multi-step reasoning, file operations, shell: → ask_hermes (speak 2-3 natural sentences of ack before the call to cover the wait, speak hermes's answer after)
+6. user asks you to REMEMBER, SAVE, NOTE, or TRACK something — "remember X", "save this", "keep track of Y", "don't forget Z", "for later: X": → ask_hermes(task: "remember for the user: <X>"). this is critical — hermes is the shared memory store. anything the user wants you to recall later MUST go through ask_hermes so it persists into the chat window too. casual "i'm gonna do X tomorrow" mentions don't count — only explicit ask-to-remember.
+7. pure knowledge / chit-chat → no tool, just speak.
 
 - exactly ONE tool call per turn.
 

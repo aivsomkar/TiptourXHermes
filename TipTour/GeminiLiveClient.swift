@@ -119,6 +119,75 @@ final class GeminiLiveClient: @unchecked Sendable {
         ]
     }
 
+    /// `click_element` is the actionable cousin of `point_at_element`.
+    /// Resolves a labelled UI element exactly like `point_at_element` does,
+    /// flies the visible glow cursor to it, then synthesises a real click at
+    /// HID level via `ActionExecutor`. Gated by the "Hermes can drive my Mac"
+    /// toggle — when off, the tool refuses and the user must opt in.
+    static var clickElementToolDeclaration: [String: Any] {
+        [
+            "name": "click_element",
+            "description": "Actually CLICK a visible UI element. Like point_at_element but it presses the button after pointing — use this when the user asks you to click, open, tap, press, or activate something. The visible cursor flies to the target first so the user sees what's about to be clicked. Requires the user to have enabled \"Hermes can drive my Mac\" — if disabled the call will return an error explaining how to enable it.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "label": [
+                        "type": "string",
+                        "description": "The literal visible text of the element to click — e.g. 'Reload', 'Save', 'File'. Use the actual text on screen, not a description."
+                    ],
+                    "box_2d": [
+                        "type": "array",
+                        "description": "Optional bounding box for the element in normalized [y1, x1, y2, x2] form, each value in [0, 1000] relative to the screenshot. Use this for apps without accessibility (canvases, games) or ambiguous labels. Origin is top-left, y first.",
+                        "items": ["type": "integer"],
+                        "minItems": 4,
+                        "maxItems": 4
+                    ]
+                ],
+                "required": ["label"]
+            ]
+        ]
+    }
+
+    /// `type_text` synthesises a paste-based text-typing event into whatever
+    /// currently has keyboard focus. Click the target field first if it
+    /// isn't already focused. Layout-agnostic; the user's clipboard is
+    /// preserved across the call.
+    static var typeTextToolDeclaration: [String: Any] {
+        [
+            "name": "type_text",
+            "description": "Type text into whatever field currently has keyboard focus. Use after click_element to fill a focused text input, search field, address bar, etc. The text is staged on the pasteboard and pasted; the user's clipboard contents are restored after. Requires \"Hermes can drive my Mac\" to be enabled.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "text": [
+                        "type": "string",
+                        "description": "The exact text to type. Multi-line is supported."
+                    ]
+                ],
+                "required": ["text"]
+            ]
+        ]
+    }
+
+    /// `press_keyboard_shortcut` posts a single keyboard chord at HID level.
+    /// Plus-separated modifier+key string ("Cmd+S", "Cmd+Shift+T", "Return").
+    static var pressKeyboardShortcutToolDeclaration: [String: Any] {
+        [
+            "name": "press_keyboard_shortcut",
+            "description": "Press a keyboard shortcut like \"Cmd+S\", \"Cmd+Shift+T\", \"Return\", \"Esc\". Modifiers (Cmd, Ctrl, Option, Shift) plus a single key, separated by '+'. Use for save / quit / new-tab / submit-form / dismiss-dialog. Requires \"Hermes can drive my Mac\" to be enabled.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "shortcut": [
+                        "type": "string",
+                        "description": "The shortcut string. Examples: \"Cmd+S\", \"Cmd+Shift+T\", \"Return\", \"Cmd+W\"."
+                    ]
+                ],
+                "required": ["shortcut"]
+            ]
+        ]
+    }
+
     static var askHermesToolDeclaration: [String: Any] {
         [
             "name": "ask_hermes",
@@ -267,6 +336,9 @@ final class GeminiLiveClient: @unchecked Sendable {
                 "tools": [
                     ["functionDeclarations": [
                         Self.pointAtElementToolDeclaration,
+                        Self.clickElementToolDeclaration,
+                        Self.typeTextToolDeclaration,
+                        Self.pressKeyboardShortcutToolDeclaration,
                         Self.askHermesToolDeclaration
                     ]]
                 ]
