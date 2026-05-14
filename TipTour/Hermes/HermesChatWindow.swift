@@ -22,6 +22,7 @@ func makeHermesChatWindow(client: HermesClient) -> NSWindow {
 struct HermesChatView: View {
     @ObservedObject var client: HermesClient
     @State private var draft: String = ""
+    @State private var showSetupSheet: Bool = false
     @FocusState private var inputFocused: Bool
 
     var body: some View {
@@ -30,7 +31,8 @@ struct HermesChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(client.transcript) { turn in
-                            ChatTurnRow(turn: turn).id(turn.id)
+                            ChatTurnRow(turn: turn, onOpenSetupSheet: { showSetupSheet = true })
+                                .id(turn.id)
                         }
                     }
                     .padding(12)
@@ -56,6 +58,12 @@ struct HermesChatView: View {
         }
         .frame(minWidth: 480, minHeight: 360)
         .onAppear { inputFocused = true }
+        .sheet(isPresented: $showSetupSheet) {
+            FirstRunSetupView(
+                isPresented: $showSetupSheet,
+                onSetupComplete: { /* user can re-send from the chat window */ }
+            )
+        }
     }
 
     private func send() {
@@ -68,6 +76,10 @@ struct HermesChatView: View {
 
 struct ChatTurnRow: View {
     let turn: HermesClient.ChatTurn
+    /// Called when the user clicks the inline "Set Up Hermes…" button
+    /// on a setup-error system row. Owned by the parent `HermesChatView`
+    /// because the sheet state lives there.
+    var onOpenSetupSheet: () -> Void = {}
 
     var body: some View {
         switch turn {
@@ -95,11 +107,24 @@ struct ChatTurnRow: View {
                 }
             }
         case .system(_, let text):
-            Text(text)
-                .italic()
-                .font(.callout)
-                .foregroundStyle(text.hasPrefix("Hermes error:") ? Color.red : Color.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(text)
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if text.lowercased().contains("set up hermes") {
+                        Button("Set Up Hermes…") {
+                            onOpenSetupSheet()
+                        }
+                        .controlSize(.small)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 4)
         }
     }
 }
