@@ -57,16 +57,6 @@ struct CompanionPanelView: View {
         }
         .frame(width: 320)
         .background(panelBackground)
-        .sheet(isPresented: $showFirstRunSetup) {
-            FirstRunSetupView(
-                isPresented: $showFirstRunSetup,
-                onSetupComplete: {
-                    // Toggle to force the body to recompute setupCoordinator
-                    // and re-evaluate needsSetup.
-                    setupNeedsRefresh.toggle()
-                }
-            )
-        }
     }
 
     // MARK: - Header
@@ -501,12 +491,6 @@ struct CompanionPanelView: View {
     private var footerSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                if setupCoordinator.needsSetup {
-                    footerButton("Set up Hermes", systemImage: "key", toggled: false) {
-                        showFirstRunSetup = true
-                    }
-                }
-
                 feedbackButton
 
                 // Always-visible Dev button — gives shipped users access to
@@ -568,17 +552,29 @@ struct CompanionPanelView: View {
     @State private var devAnthropicKeyStatus: String = ""
     @State private var devOpenAIKeyInput: String = ""
     @State private var devOpenAIKeyStatus: String = ""
-    @State private var devLumaKeyInput: String = ""
-    @State private var devLumaKeyStatus: String = ""
 
-    @State private var showFirstRunSetup: Bool = false
-    @State private var setupNeedsRefresh: Bool = false
-    // Re-evaluate every body call so the button hides as soon as the user
-    // finishes setup. The coordinator is cheap to construct (no I/O until
-    // methods are called).
-    private var setupCoordinator: HermesSetupCoordinator {
-        _ = setupNeedsRefresh   // touch to force a recompute
-        return HermesSetupCoordinator()
+    /// Current Hermes provider selection backing the Dev-panel picker.
+    /// Seeded from `~/.hermes/config.yaml` on view appear; writing to it
+    /// (via the picker's `.onChange`) rewrites the config file and stops
+    /// the running Hermes subprocess so the next chat send launches with
+    /// the new provider's env var.
+    @State private var hermesProviderSelection: HermesConfigBootstrapper.Provider = .anthropic
+
+    /// Called when the Hermes-provider picker changes. Writes config.yaml
+    /// with the new provider's defaults, then stops the running Hermes
+    /// subprocess so the next chat send launches fresh with the matching
+    /// env var. The user still has to paste an API key in the row below
+    /// if they don't have one for the chosen provider yet.
+    private func applyHermesProviderChange(_ provider: HermesConfigBootstrapper.Provider) {
+        do {
+            let bootstrapper = HermesConfigBootstrapper()
+            try bootstrapper.writeMinimalConfig(provider: provider)
+            companionManager.hermesClient.stop()
+        } catch {
+            // Non-fatal: the user can manually edit ~/.hermes/config.yaml
+            // if write-back fails. Print so we see it in console.
+            print("[Panel] failed to write hermes config: \(error)")
+        }
     }
 
     /// One-line bring-your-own-key row. Icon + label on the left, a
@@ -665,6 +661,31 @@ struct CompanionPanelView: View {
 
     private var devToolsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Hermes provider picker — single source of truth lives in
+            // ~/.hermes/config.yaml. The picker writes config.yaml on change
+            // AND stops the running Hermes subprocess so the next chat send
+            // launches with the new provider's env var.
+            sectionHeader("HERMES PROVIDER")
+
+            HStack {
+                Text("Hermes provider")
+                    .font(.callout)
+                    .foregroundColor(DS.Colors.textPrimary)
+                Spacer()
+                Picker("", selection: $hermesProviderSelection) {
+                    ForEach(HermesConfigBootstrapper.Provider.allCases) { provider in
+                        Text(provider.displayName).tag(provider)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 180)
+                .onChange(of: hermesProviderSelection) { _, newValue in
+                    applyHermesProviderChange(newValue)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+
             #if DEBUG
             sectionHeader("DEBUG")
 
@@ -742,24 +763,6 @@ struct CompanionPanelView: View {
                     .transition(.opacity)
             }
 
-            byokKeyRow(
-                title: "Luma",
-                placeholder: "luma-…",
-                input: $devLumaKeyInput,
-                save: { KeychainStore.lumaAPIKey = devLumaKeyInput },
-                clear: { devLumaKeyInput = ""; KeychainStore.lumaAPIKey = nil },
-                status: $devLumaKeyStatus,
-                hasSavedKey: !(KeychainStore.lumaAPIKey ?? "").isEmpty
-            )
-            if !devLumaKeyStatus.isEmpty {
-                Text(devLumaKeyStatus)
-                    .font(.system(size: 10))
-                    .foregroundColor(DS.Colors.textTertiary)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 4)
-                    .transition(.opacity)
-            }
-
             // Hermes runtime version — sourced from the bundled
             // `hermes-version.txt` baked in at build time. Rendered as a
             // single dim monospaced line so it reads like a build stamp.
@@ -776,13 +779,17 @@ struct CompanionPanelView: View {
             }
         }
         .onAppear {
+            // Seed the Hermes-provider picker from config.yaml. Falls back
+            // to .anthropic when no config exists yet.
+            let coordinator = HermesSetupCoordinator()
+            hermesProviderSelection = coordinator.configuredProvider ?? .anthropic
+
             // Pre-populate the field from Keychain so the user can see
             // whether a key is already saved (revealed as dots in the
             // SecureField).
             devGeminiKeyInput = KeychainStore.geminiAPIKey ?? ""
             devAnthropicKeyInput = KeychainStore.anthropicAPIKey ?? ""
             devOpenAIKeyInput = KeychainStore.openAIAPIKey ?? ""
-            devLumaKeyInput = KeychainStore.lumaAPIKey ?? ""
         }
         .padding(.vertical, 4)
     }

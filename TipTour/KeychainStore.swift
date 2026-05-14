@@ -119,21 +119,4 @@ enum KeychainStore {
         set { set(newValue ?? "", forKey: "openAIAPIKey") }
     }
 
-    /// Luma AI Dream Machine API key for video generation.
-    /// Set by the user in TipTour Dev → API KEYS → Luma.
-    static var lumaAPIKey: String? {
-        get { get(forKey: "lumaAPIKey") }
-        set { set(newValue ?? "", forKey: "lumaAPIKey") }
-    }
-
-    /// Provider key for Hermes's "google" provider. Same value the
-    /// user would put in GEMINI_API_KEY env var. Separate from
-    /// `geminiAPIKey` (used by GeminiLiveSession's WebSocket) so the
-    /// two surfaces can have different keys if the user chooses — most
-    /// users will just paste the same value into both.
-    static var googleAPIKey: String? {
-        get { get(forKey: "googleAPIKey") }
-        set { set(newValue ?? "", forKey: "googleAPIKey") }
-    }
-
 }

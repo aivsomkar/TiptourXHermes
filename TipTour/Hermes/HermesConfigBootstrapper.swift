@@ -37,11 +37,13 @@ struct HermesConfigBootstrapper {
         }
 
         /// KeychainStore key used to persist the API key for this provider.
+        /// Google shares the existing `geminiAPIKey` slot — the same key
+        /// `GeminiLiveSession` already reads — so users only paste once.
         var keychainKey: String {
             switch self {
             case .anthropic: return "anthropicAPIKey"
             case .openai:    return "openAIAPIKey"
-            case .google:    return "googleAPIKey"
+            case .google:    return "geminiAPIKey"
             }
         }
 
