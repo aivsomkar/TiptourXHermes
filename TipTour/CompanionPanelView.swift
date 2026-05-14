@@ -673,6 +673,7 @@ struct CompanionPanelView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .tint(DS.Colors.jarvisAccent)
             .labelsHidden()
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -789,14 +790,23 @@ struct CompanionPanelView: View {
     }
 
     /// Compact uppercase section label used inside the Dev panel.
+    /// JARVIS-style: monospaced, cyan-tinted, with a subtle leading marker.
     private func sectionHeader(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .semibold, design: .rounded))
-            .tracking(0.4)
-            .foregroundColor(DS.Colors.textTertiary)
-            .padding(.horizontal, 10)
-            .padding(.top, 6)
-            .padding(.bottom, 3)
+        HStack(spacing: 6) {
+            Rectangle()
+                .fill(DS.Colors.jarvisAccent)
+                .frame(width: 6, height: 1)
+            Text(text)
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .tracking(1.2)
+                .foregroundColor(DS.Colors.jarvisAccent)
+            Rectangle()
+                .fill(DS.Colors.jarvisAccent.opacity(0.25))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private func devToolRow(
@@ -848,10 +858,15 @@ struct CompanionPanelView: View {
     // MARK: - Visuals
 
     private var panelBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(DS.Colors.background)
-            .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 10)
-            .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(DS.Colors.background)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+        .shadow(color: DS.Colors.jarvisGlow, radius: 24, x: 0, y: 0)
     }
 
     private var statusDotColor: Color {
