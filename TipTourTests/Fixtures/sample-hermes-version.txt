@@ -1,0 +1,5 @@
+hermes_git_ref=abc1234deadbeef
+hermes_version=0.13.0
+python_version=3.11.15
+python_build=20260510
+bundled_at=2026-05-14T18:00:00Z

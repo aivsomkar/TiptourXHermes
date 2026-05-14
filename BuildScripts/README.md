@@ -50,6 +50,34 @@ astral-sh/ in 2025; URLs against the old org return 404.)
 `x86_64-apple-darwin`. Universal builds aren't supported today; add a
 parallel download + thin-binary merge to the script if needed.
 
+### Runtime version manifest
+
+The script also emits `hermes-version.txt` next to the `hermes-runtime`
+entrypoint:
+
+    hermes_git_ref=<pinned SHA from this script>
+    hermes_version=<pip-reported hermes-agent version>
+    python_version=<bundled CPython version>
+    python_build=<python-build-standalone release tag>
+    bundled_at=<ISO-8601 UTC timestamp>
+
+The Swift app reads this through `HermesRuntimeVersion.read(from:)`
+and surfaces a short summary in the menu bar panel's Dev section.
+Useful when triaging "which build is this user on" support questions.
+
+### Parent-PID watchdog
+
+`parent_watchdog.py` is copied alongside the entrypoint and launched as
+a sibling Python process by the entrypoint shell wrapper. It polls
+`os.getppid()` every 0.5s; when its parent (the Mac app) is reaped
+and PPID becomes 1, it sends SIGTERM (then SIGKILL after 3s) to the
+acp_adapter PID. Without this, a Mac-app crash would orphan a Python
+process that consumes memory until the user reboots.
+
+The watchdog is a separate process — not a thread or signal handler
+inside acp_adapter — because the adapter owns SIGTERM/SIGINT for its
+own shutdown flow.
+
 ### Validating the bundle manually
 
     ./BuildScripts/bundle-hermes.sh build/hermes-runtime
@@ -79,3 +107,4 @@ well, first configure Hermes with `hermes setup` (creates
 | `pip install … fails on hermes-agent` | Transient git/network error | Re-run the build |
 | `python3 -c "import hermes_constants"` raises ImportError | Install partially completed | `rm -rf build/hermes-runtime && ./BuildScripts/bundle-hermes.sh build/hermes-runtime` |
 | Build phase doesn't re-run on incremental builds | "Based on dependency analysis" is checked | Uncheck it in Xcode build phase settings |
+| HermesRuntimeVersion.ReadError thrown at app launch | `hermes-version.txt` missing or malformed | Rerun the bundler. If the file exists but a field is empty, the build host failed to invoke the bundled `python3` for one of the introspection steps — check the script's stderr |

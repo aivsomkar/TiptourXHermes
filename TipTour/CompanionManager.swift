@@ -147,12 +147,14 @@ final class CompanionManager: ObservableObject {
     /// Jarvis sound cue: "listening" when the mic opens, "working" when
     /// the model starts responding or running a task.
     private func handleVoiceStateTransition(to newState: CompanionVoiceState) {
-        switch newState {
-        case .listening:
-            playVoiceStateSound(named: "jarvislistening")
-        case .responding, .processing:
-            playVoiceStateSound(named: "jarvisworking")
-        case .idle:
+        // Voice-state sound cues (jarvislistening/jarvisworking) are
+        // disabled: AVAudioPlayer playback interrupts the shared
+        // AVAudioEngine that runs the mic + Gemini's speaker, killing the
+        // engine and causing TTS chunks to drop after a long ask_hermes
+        // call. Visual cues (Arc Reactor, waveform) signal state instead.
+        // We still halt any in-flight cue on .idle in case one was left
+        // playing from an earlier app version.
+        if newState == .idle {
             voiceStateSoundPlayer?.stop()
         }
     }
@@ -410,7 +412,6 @@ final class CompanionManager: ObservableObject {
         // can't call our local tools.
         if hermesClient.mcpServerURL == nil {
             let resolver = AccessibilityTreeResolver()
-            mcpServer.register(SpeakTool())
             mcpServer.register(ScreenshotTool())
             mcpServer.register(A11yTreeTool(resolver: resolver))
             mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
@@ -751,12 +752,12 @@ TOOL: ask_hermes(task)
   task = a complete, self-contained description of the work. hermes has no memory of this voice conversation, so include all context it needs.
   hermes returns its final answer as text in the toolResponse. you then speak that answer to the user — paraphrase it for voice if needed (shorter, conversational, no markdown).
 
-  BEFORE calling: speak ONE short acknowledgement ("on it, let me check", "looking into that"), THEN call the tool, THEN speak the result. don't go silent while hermes is working — the user shouldn't hear dead air.
+  BEFORE calling: speak 2-3 natural sentences (~5-10 seconds of speech) acknowledging the request and previewing what you're about to do. you CANNOT speak again until ask_hermes returns 5-30 seconds later — fill that gap up front. THEN call the tool. THEN speak hermes's result.
 
 ABSOLUTE RULES — pick by USER INTENT:
 
 1. user wants to be SHOWN a single thing on screen — "where is", "point at", "what is this": → point_at_element (stay silent before the call, speak ONCE after)
-2. user wants deep work — coding, research, writing, multi-step reasoning, file operations, shell: → ask_hermes (speak ONE short ack before the call, speak hermes's answer after)
+2. user wants deep work — coding, research, writing, multi-step reasoning, file operations, shell: → ask_hermes (speak 2-3 natural sentences of ack before the call to cover the wait, speak hermes's answer after)
 3. user asks you to REMEMBER, SAVE, NOTE, or TRACK something — "remember X", "save this", "keep track of Y", "don't forget Z", "for later: X": → ask_hermes(task: "remember for the user: <X>"). this is critical — hermes is the shared memory store. anything the user wants you to recall later MUST go through ask_hermes so it persists into the chat window too. casual "i'm gonna do X tomorrow" mentions don't count — only explicit ask-to-remember.
 4. pure knowledge / chit-chat → no tool, just speak.
 
@@ -772,7 +773,13 @@ PRE-TOOL-CALL SILENCE (point_at_element):
 if your next action is a point_at_element call, stay completely silent — no filler, no "sure", no "hmm". call the tool, wait for toolResponse, THEN speak. if you speak before the tool call, the user hears a half-word that cuts off when the tool fires.
 
 PRE-TOOL-CALL SPOKEN ACK (ask_hermes only):
-ask_hermes can take many seconds to return. speak ONE short acknowledgement BEFORE the call ("on it", "let me check") so the user knows you heard them. then call the tool. then speak hermes's result.
+ask_hermes blocks gemini's voice for 5-30 seconds while hermes thinks — you literally CANNOT speak again until it returns. so BEFORE calling, speak 2-3 natural sentences that buy time: acknowledge the request, preview what you're about to do, hint that you're consulting your deeper-reasoning agent. aim for 5-10 seconds of speech. examples:
+
+  "let me look at that. i'll take a moment to think it through and come back with something good."
+  "okay, working on it. give me a few seconds — i'm pulling this together carefully."
+  "on it. i'm going to dig into this properly, hang tight."
+
+then call the tool. then speak hermes's result.
 
 examples:
 

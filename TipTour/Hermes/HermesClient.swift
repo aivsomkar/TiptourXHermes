@@ -36,6 +36,12 @@ final class HermesClient: ObservableObject {
     // MARK: Init
     init(hermesHome: URL? = nil) {
         self.hermesHomeOverride = hermesHome
+        self.setupCoordinator = HermesSetupCoordinator(hermesHome: hermesHome)
+    }
+
+    init(hermesHome: URL?, setupCoordinator: HermesSetupCoordinator) {
+        self.hermesHomeOverride = hermesHome
+        self.setupCoordinator = setupCoordinator
     }
 
     deinit {
@@ -76,6 +82,20 @@ final class HermesClient: ObservableObject {
         transcript.append(.user(id: UUID(), text: userText))
 
         if sessionId == nil {
+            if setupCoordinator.needsSetup {
+                // Don't even try to launch — surface an actionable error.
+                let reason: HermesClientError.NeedsSetupReason
+                if !setupCoordinator.bootstrapper.hasValidConfig {
+                    reason = .noConfig
+                } else if let p = setupCoordinator.configuredProvider {
+                    reason = .noKeyForProvider(p.displayName)
+                } else {
+                    reason = .noConfig
+                }
+                appendSystemError(HermesClientError.needsSetup(reason: reason))
+                isWorking = false
+                return
+            }
             isWorking = true
             do {
                 try await launchSubprocessIfNeeded()
@@ -172,6 +192,10 @@ final class HermesClient: ObservableObject {
 
     // MARK: Internal state
     private let hermesHomeOverride: URL?
+    /// Setup-state oracle. Default points at the same HERMES_HOME we'll
+    /// pass to the subprocess. Tests can inject a coordinator backed by a
+    /// fake key reader; production code uses the Keychain-backed default.
+    private let setupCoordinator: HermesSetupCoordinator
     /// Tail of the serial send queue. Each `send(_:)` chains itself after
     /// this task and replaces it, so concurrent callers (voice ask_hermes
     /// + chat window, or two rapid ask_hermes calls) hit Hermes's
@@ -217,6 +241,12 @@ final class HermesClient: ObservableObject {
         var env = ProcessInfo.processInfo.environment
         if let override = hermesHomeOverride {
             env["HERMES_HOME"] = override.path
+        }
+        // Inject provider API key from Keychain (or test reader). This is
+        // the env var Hermes reads at session/new time to authenticate with
+        // the upstream model provider.
+        for (key, value) in setupCoordinator.environmentVariablesForSubprocess() {
+            env[key] = value
         }
         p.environment = env
 
@@ -522,6 +552,12 @@ enum HermesClientError: Error, CustomStringConvertible {
     case runtimeMissing
     case subprocessGone
     case malformedResponse(String)
+    case needsSetup(reason: NeedsSetupReason)
+
+    enum NeedsSetupReason: Equatable {
+        case noConfig                       // ~/.hermes/config.yaml missing or malformed
+        case noKeyForProvider(String)       // config names a provider but Keychain has no key
+    }
 
     var description: String {
         switch self {
@@ -531,6 +567,17 @@ enum HermesClientError: Error, CustomStringConvertible {
             return "hermes-runtime subprocess is not running"
         case .malformedResponse(let why):
             return "malformed ACP response: \(why)"
+        case .needsSetup(.noConfig):
+            return "Hermes isn't set up yet. Open Settings → Set up Hermes to pick a provider."
+        case .needsSetup(.noKeyForProvider(let p)):
+            return "Hermes is configured for \(p) but no API key is stored. Open Settings → Set up Hermes to paste one."
         }
+    }
+
+    /// True when the error is a setup-related one the UI should resolve
+    /// with the "Set Up Hermes…" affordance rather than a retry.
+    var isSetupError: Bool {
+        if case .needsSetup = self { return true }
+        return false
     }
 }

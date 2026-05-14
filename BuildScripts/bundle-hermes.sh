@@ -11,7 +11,11 @@ PYTHON_VERSION="3.11.15"
 PYTHON_BUILD="20260510"
 PYTHON_ARCH="aarch64-apple-darwin"
 PYTHON_FLAVOUR="install_only"
-HERMES_GIT_REF="${HERMES_GIT_REF:-main}"
+# Pinned 2026-05-14. Reproducible-build requirement: every CI/release
+# build resolves the same Hermes source. To upgrade, replace this SHA
+# AND rebuild reference-config.yaml against the new model_dev_cache
+# (provider names rarely change but model defaults do).
+HERMES_GIT_REF="${HERMES_GIT_REF:-6122a79aab45041d8b7c8d775f95be3ac6ce579f}"
 
 PROJECT_DIR="${SRCROOT:-$(pwd)}"
 OUT_DIR="${1:-$PROJECT_DIR/build/hermes-runtime}"
@@ -46,13 +50,25 @@ if ! "$PYTHON_BIN" -c "import hermes_constants" 2>/dev/null; then
     "hermes-agent[all] @ git+https://github.com/NousResearch/hermes-agent.git@$HERMES_GIT_REF"
 fi
 
+echo "→ Copying runtime assets"
+cp "$PROJECT_DIR/BuildScripts/runtime-assets/parent_watchdog.py" "$OUT_DIR/parent_watchdog.py"
+chmod +x "$OUT_DIR/parent_watchdog.py"
+
 echo "→ Writing runtime entrypoint"
 cat > "$OUT_DIR/hermes-runtime" <<'ENTRYPOINT_EOF'
 #!/usr/bin/env bash
-# Launched by HermesForNoobs.app. Exec's the bundled Python with the
-# Hermes ACP adapter, inheriting stdin/stdout/stderr.
+# Launched by HermesForNoobs.app. Starts the parent-watchdog as a
+# sibling, then exec's the bundled Python with the Hermes ACP adapter.
+# stdin/stdout/stderr are inherited from the Mac-app parent.
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/python-relocatable/bin/python3" -m acp_adapter "$@"
+PY="$DIR/python-relocatable/bin/python3"
+
+# Watchdog is a tiny separate Python process. Its job: if the Mac app
+# (our parent) dies, kill our PID. It exits on its own if we exit first.
+"$PY" "$DIR/parent_watchdog.py" $$ &
+disown $!
+
+exec "$PY" -m acp_adapter "$@"
 ENTRYPOINT_EOF
 chmod +x "$OUT_DIR/hermes-runtime"
 
@@ -61,6 +77,27 @@ chmod +x "$OUT_DIR/hermes-runtime"
 # that make codesign reject the file with "resource fork ... not allowed".
 echo "→ Stripping extended attributes"
 xattr -cr "$OUT_DIR" 2>/dev/null || true
+
+# Write a machine-readable version manifest the Swift app can read from
+# Bundle.main.resourceURL. Format: one "key=value" per line, ASCII only.
+# Fields:
+#   hermes_git_ref     The SHA we pinned to in this script
+#   hermes_version     pip-reported version of hermes-agent (may be the
+#                      same across SHAs if upstream hasn't bumped __version__)
+#   python_version     CPython version reported by the bundled interpreter
+#   python_build       astral-sh/python-build-standalone release tag
+#   bundled_at         ISO-8601 UTC timestamp this bundle was produced
+echo "→ Writing hermes-version.txt"
+HERMES_VER="$("$PYTHON_BIN" -c 'import importlib.metadata; print(importlib.metadata.version("hermes-agent"))' 2>/dev/null || echo "unknown")"
+PY_VER="$("$PYTHON_BIN" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
+NOW="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+cat > "$OUT_DIR/hermes-version.txt" <<VERSION_EOF
+hermes_git_ref=$HERMES_GIT_REF
+hermes_version=$HERMES_VER
+python_version=$PY_VER
+python_build=$PYTHON_BUILD
+bundled_at=$NOW
+VERSION_EOF
 
 # Ad-hoc sign every Mach-O file in the runtime so Xcode's outer
 # hardened-runtime sign pass doesn't choke on "code object is not signed

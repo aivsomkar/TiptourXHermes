@@ -1,11 +1,10 @@
 // TipTour/Hermes/MCPTools.swift
 //
-// MCP tool protocol and the Plan-3a `speak` implementation. New tools
-// (Plan 3b: take_screenshot, get_a11y_tree, point_at) are added by
-// conforming to MCPTool and registering with MCPServer.
+// MCP tool protocol shared by all Plan 3b tools (take_screenshot,
+// get_a11y_tree, point_at) and any future MCP tools. New tools
+// conform to MCPTool and register with MCPServer.
 
 import Foundation
-import AVFoundation
 
 // MARK: - Tool protocol
 
@@ -37,44 +36,5 @@ enum MCPToolError: Error, CustomStringConvertible {
         case .invalidArguments(let why): return "invalid arguments: \(why)"
         case .toolFailed(let why):       return "tool failed: \(why)"
         }
-    }
-}
-
-// MARK: - SpeakTool
-
-/// Speaks text aloud via AVSpeechSynthesizer using the system voice.
-/// Fire-and-forget: `call()` queues the utterance and returns immediately.
-@MainActor
-final class SpeakTool: MCPTool {
-    let name = "speak"
-    let description = "Speak the given text aloud through the user's Mac using the system voice."
-    let inputSchema: JSONValue = .object([
-        "type": .string("object"),
-        "properties": .object([
-            "text": .object([
-                "type": .string("string"),
-                "description": .string("The text to speak aloud."),
-            ])
-        ]),
-        "required": .array([.string("text")]),
-    ])
-
-    /// Held as a stored property so the synthesizer isn't deallocated
-    /// mid-playback. AVSpeechSynthesizer queues utterances internally so
-    /// rapid back-to-back calls do not conflict.
-    private let synth = AVSpeechSynthesizer()
-
-    func call(_ arguments: JSONValue) async throws -> [MCPToolContent] {
-        guard case .object(let dict) = arguments,
-              case .string(let text) = dict["text"] ?? .null,
-              !text.isEmpty
-        else {
-            throw MCPToolError.invalidArguments("speak requires a non-empty `text` string")
-        }
-
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        synth.speak(utterance)
-        return [.text("Speaking: \(text)")]
     }
 }

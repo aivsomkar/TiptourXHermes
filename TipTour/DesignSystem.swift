@@ -88,6 +88,35 @@ enum DS {
         static let blue900 = Color(hex: "#1e3a8a")
         static let blue950 = Color(hex: "#172554")
 
+        // ── Tailwind Cyan Scale ─────────────────────────────────────
+        // Used for JARVIS-style accents — borders, glows, section
+        // headers, active states. Cyan reads brighter on dark surfaces
+        // than the blue scale, giving the "tech display" feel.
+
+        static let cyan300 = Color(hex: "#67e8f9")
+        static let cyan400 = Color(hex: "#22d3ee")
+        static let cyan500 = Color(hex: "#06b6d4")
+        static let cyan600 = Color(hex: "#0891b2")
+
+        // ── JARVIS Aesthetic Tokens ─────────────────────────────────
+        // Semantic names for the cyan/glow vocabulary used in panel
+        // chrome, section headers, and the Arc Reactor overlay.
+
+        /// Bright cyan used for active section headers, picker tints,
+        /// and the Arc Reactor cursor glow.
+        static let jarvisAccent = cyan400
+
+        /// Slightly dimmer cyan for inactive / supporting elements.
+        static let jarvisAccentDim = cyan500
+
+        /// Thin border color around panel cards. Low-saturation cyan
+        /// — provides the "tech UI" outline without screaming.
+        static let jarvisBorder = cyan500.opacity(0.35)
+
+        /// Soft cyan glow used in .shadow modifiers behind cards and
+        /// cursor. Wider radius, low opacity.
+        static let jarvisGlow = cyan400.opacity(0.18)
+
         // ── Accent (derived from blue scale) ───────────────────────
         // The primary fill is Blue 600; hover darkens to Blue 700.
 
