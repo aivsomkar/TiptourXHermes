@@ -667,24 +667,18 @@ struct CompanionPanelView: View {
             // launches with the new provider's env var.
             sectionHeader("HERMES PROVIDER")
 
-            HStack {
-                Text("Hermes provider")
-                    .font(.callout)
-                    .foregroundColor(DS.Colors.textPrimary)
-                Spacer()
-                Picker("", selection: $hermesProviderSelection) {
-                    ForEach(HermesConfigBootstrapper.Provider.allCases) { provider in
-                        Text(provider.displayName).tag(provider)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(maxWidth: 180)
-                .onChange(of: hermesProviderSelection) { _, newValue in
-                    applyHermesProviderChange(newValue)
+            Picker("", selection: $hermesProviderSelection) {
+                ForEach(HermesConfigBootstrapper.Provider.allCases) { provider in
+                    Text(provider.displayName).tag(provider)
                 }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
+            .onChange(of: hermesProviderSelection) { _, newValue in
+                applyHermesProviderChange(newValue)
+            }
 
             #if DEBUG
             sectionHeader("DEBUG")
