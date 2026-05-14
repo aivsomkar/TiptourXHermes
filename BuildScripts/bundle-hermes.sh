@@ -50,13 +50,25 @@ if ! "$PYTHON_BIN" -c "import hermes_constants" 2>/dev/null; then
     "hermes-agent[all] @ git+https://github.com/NousResearch/hermes-agent.git@$HERMES_GIT_REF"
 fi
 
+echo "→ Copying runtime assets"
+cp "$PROJECT_DIR/BuildScripts/runtime-assets/parent_watchdog.py" "$OUT_DIR/parent_watchdog.py"
+chmod +x "$OUT_DIR/parent_watchdog.py"
+
 echo "→ Writing runtime entrypoint"
 cat > "$OUT_DIR/hermes-runtime" <<'ENTRYPOINT_EOF'
 #!/usr/bin/env bash
-# Launched by HermesForNoobs.app. Exec's the bundled Python with the
-# Hermes ACP adapter, inheriting stdin/stdout/stderr.
+# Launched by HermesForNoobs.app. Starts the parent-watchdog as a
+# sibling, then exec's the bundled Python with the Hermes ACP adapter.
+# stdin/stdout/stderr are inherited from the Mac-app parent.
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/python-relocatable/bin/python3" -m acp_adapter "$@"
+PY="$DIR/python-relocatable/bin/python3"
+
+# Watchdog is a tiny separate Python process. Its job: if the Mac app
+# (our parent) dies, kill our PID. It exits on its own if we exit first.
+"$PY" "$DIR/parent_watchdog.py" $$ &
+disown $!
+
+exec "$PY" -m acp_adapter "$@"
 ENTRYPOINT_EOF
 chmod +x "$OUT_DIR/hermes-runtime"
 
