@@ -1,8 +1,6 @@
 // TipTour/Settings/MemoryTabView.swift
 //
-// Editor for ~/.hermes/memories/USER.md. Plain TextEditor + Save
-// + Refresh. Refresh re-reads from disk in case Hermes wrote to the
-// file outside this UI; Save writes back atomically via HermesMemoryStore.
+// JARVIS-restyled editor for ~/.hermes/memories/USER.md.
 
 import SwiftUI
 
@@ -15,53 +13,52 @@ struct MemoryTabView: View {
     private let store = HermesMemoryStore()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
+        VStack(alignment: .leading, spacing: 14) {
+            JarvisSectionHeader(title: "USER MEMORY")
+            Text("FREE-FORM FACTS HERMES WILL RECALL ACROSS SESSIONS.")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(0.6)
+                .foregroundColor(DS.Colors.textTertiary)
+
             TextEditor(text: $text)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 200)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(DS.Colors.textPrimary)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(DS.Colors.surface1)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
+                    }
                 )
+                .frame(minHeight: 220)
                 .onChange(of: text) { _, _ in
                     hasUnsavedChanges = true
                     status = ""
                 }
+
             HStack {
-                Button("Refresh from disk") { reload() }
+                JarvisButton(title: "REFRESH", enabled: true) { reload() }
                 Spacer()
                 if !status.isEmpty {
-                    Text(status)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("> \(status.uppercased())")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundColor(DS.Colors.jarvisAccentDim)
                 }
-                Button("Save") { save() }
-                    .disabled(!hasUnsavedChanges)
-                    .keyboardShortcut("s")
+                JarvisButton(title: "SAVE", enabled: hasUnsavedChanges) { save() }
             }
-            footer
+
+            Text("STORED AT ~/.hermes/memories/USER.md. HERMES MAY ALSO APPEND DURING NORMAL USE — REFRESH BEFORE EDITING IF YOU'VE HAD A RECENT CONVERSATION.")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(0.6)
+                .foregroundColor(DS.Colors.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
         .onAppear { reload() }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("User memory")
-                .font(.callout.bold())
-            Text("Free-form facts Hermes will recall across sessions. Stored at ~/.hermes/memories/USER.md.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var footer: some View {
-        Text("Hermes may also append to this file during normal use — click Refresh from disk before editing if you've had a recent conversation.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func reload() {
@@ -76,7 +73,7 @@ struct MemoryTabView: View {
             hasUnsavedChanges = false
             status = "Saved"
         } catch {
-            status = "Save failed: \(error.localizedDescription)"
+            status = "Save failed: \(error.localizedDescription.prefix(30))"
         }
     }
 }

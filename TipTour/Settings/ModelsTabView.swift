@@ -1,11 +1,8 @@
 // TipTour/Settings/ModelsTabView.swift
 //
-// ModelsTabView is the user-facing provider/key management surface.
-// It replaces the inline picker + key rows that lived in the Dev
-// panel during the Plan 4 cleanup, and adds:
-//   1. Test Connection probe against the live /v1/models endpoint
-//   2. Bundled Hermes runtime version display
-//   3. A consistent place for new provider-related settings later
+// JARVIS-restyled provider/key management. Provider segmented picker,
+// per-provider key row (monospaced label + secure field + SAVE + TEST),
+// and bundled Hermes runtime version readout.
 
 import SwiftUI
 
@@ -23,24 +20,21 @@ struct ModelsTabView: View {
     @State private var configError: String?
 
     private enum ProbeStatus: Equatable {
-        case idle
-        case probing
-        case ok
+        case idle, probing, ok
         case failed(String)
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 20) {
                 providerSection
-                Divider()
                 keysSection
-                Divider()
                 runtimeSection
                 if let err = configError {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundColor(.red)
+                    Text("✗ \(err.uppercased())")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundColor(DS.Colors.destructive)
                 }
             }
             .padding(20)
@@ -51,29 +45,30 @@ struct ModelsTabView: View {
     // MARK: Sections
 
     private var providerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Active provider")
-                .font(.callout.bold())
+        VStack(alignment: .leading, spacing: 10) {
+            JarvisSectionHeader(title: "ACTIVE PROVIDER")
             Picker("", selection: $selectedProvider) {
                 ForEach(HermesConfigBootstrapper.Provider.allCases) { p in
                     Text(p.displayName).tag(p)
                 }
             }
             .pickerStyle(.segmented)
+            .tint(DS.Colors.jarvisAccent)
+            .labelsHidden()
             .onChange(of: selectedProvider) { _, newValue in
                 applyProviderChange(newValue)
             }
-            Text("Switching provider rewrites ~/.hermes/config.yaml's `model.provider` field. Your saved keys are kept; the active provider's key is what Hermes uses at session/new time.")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text("SWITCHING PROVIDER REWRITES ~/.hermes/config.yaml. SAVED KEYS PERSIST; THE ACTIVE PROVIDER'S KEY IS WHAT HERMES USES.")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(0.6)
+                .foregroundColor(DS.Colors.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private var keysSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("API keys")
-                .font(.callout.bold())
+            JarvisSectionHeader(title: "API KEYS")
             keyRow(provider: .anthropic, value: $anthropicKey)
             keyRow(provider: .openai,    value: $openAIKey)
             keyRow(provider: .google,    value: $googleKey)
@@ -82,17 +77,17 @@ struct ModelsTabView: View {
 
     private var runtimeSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Runtime")
-                .font(.callout.bold())
+            JarvisSectionHeader(title: "RUNTIME")
             if let url = HermesRuntimeVersion.bundledURL,
                let v = try? HermesRuntimeVersion.read(from: url) {
                 Text(v.shortDisplayString)
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DS.Colors.textSecondary)
             } else {
-                Text("Hermes runtime version file missing — did the build phase run?")
-                    .font(.caption)
-                    .foregroundColor(.orange)
+                Text("HERMES VERSION FILE MISSING — DID THE BUILD PHASE RUN?")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundColor(DS.Colors.warning)
             }
         }
     }
@@ -104,25 +99,37 @@ struct ModelsTabView: View {
         value: Binding<String>
     ) -> some View {
         let status = probeStatus[provider] ?? .idle
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(provider.displayName)
-                    .font(.callout)
+        let trimmed = value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(provider.displayName.uppercased())
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .tracking(1.2)
+                    .foregroundColor(DS.Colors.textPrimary)
                 Spacer()
                 statusBadge(for: status)
             }
             HStack(spacing: 8) {
                 SecureField("paste \(provider.displayName) API key", text: value)
-                    .textFieldStyle(.roundedBorder)
-                Button("Save") {
-                    saveKey(provider: provider, value: value.wrappedValue)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(DS.Colors.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(DS.Colors.surface1)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
+                        }
+                    )
+                JarvisButton(title: "SAVE", enabled: !trimmed.isEmpty) {
+                    saveKey(provider: provider, value: trimmed)
                 }
-                .disabled(value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Button("Test") {
-                    Task { await testConnection(provider: provider, key: value.wrappedValue) }
+                JarvisButton(title: "TEST", enabled: !trimmed.isEmpty && status != .probing) {
+                    Task { await testConnection(provider: provider, key: trimmed) }
                 }
-                .disabled(value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                          || status == .probing)
             }
         }
     }
@@ -133,14 +140,28 @@ struct ModelsTabView: View {
         case .idle:
             EmptyView()
         case .probing:
-            ProgressView().scaleEffect(0.6).frame(width: 16, height: 16)
+            ProgressView().scaleEffect(0.5).frame(width: 14, height: 14)
         case .ok:
-            Label("OK", systemImage: "checkmark.circle.fill")
-                .labelStyle(.iconOnly).foregroundColor(.green)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(DS.Colors.jarvisAccent)
+                    .frame(width: 5, height: 5)
+                    .shadow(color: DS.Colors.jarvisAccent.opacity(0.7), radius: 3)
+                Text("OK")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .tracking(1.0)
+                    .foregroundColor(DS.Colors.jarvisAccent)
+            }
         case .failed(let why):
-            Label(why, systemImage: "xmark.circle.fill")
-                .foregroundColor(.red)
-                .font(.caption)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(DS.Colors.destructive)
+                    .frame(width: 5, height: 5)
+                Text(why.uppercased())
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .tracking(0.6)
+                    .foregroundColor(DS.Colors.destructive)
+            }
         }
     }
 
@@ -164,8 +185,7 @@ struct ModelsTabView: View {
     }
 
     private func saveKey(provider: HermesConfigBootstrapper.Provider, value: String) {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        KeychainStore.set(trimmed, forKey: provider.keychainKey)
+        KeychainStore.set(value, forKey: provider.keychainKey)
     }
 
     private func testConnection(provider: HermesConfigBootstrapper.Provider, key: String) async {
@@ -178,7 +198,7 @@ struct ModelsTabView: View {
             case .emptyKey:     probeStatus[provider] = .failed("empty")
             case .authFailed:   probeStatus[provider] = .failed("auth failed")
             case .serverError(let s): probeStatus[provider] = .failed("HTTP \(s)")
-            case .networkError(let m): probeStatus[provider] = .failed("network: \(m.prefix(40))")
+            case .networkError(let m): probeStatus[provider] = .failed("network: \(m.prefix(20))")
             }
         }
     }

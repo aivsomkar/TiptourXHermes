@@ -1,9 +1,6 @@
 // TipTour/Settings/SoulTabView.swift
 //
-// Editor for ~/.hermes/SOUL.md — Hermes's system prompt. Same shape as
-// MemoryTabView but with a louder caveat: SOUL changes only take effect
-// when Hermes loads a new session, so the user may need to restart
-// chat after editing.
+// JARVIS-restyled editor for ~/.hermes/SOUL.md.
 
 import SwiftUI
 
@@ -16,51 +13,52 @@ struct SoulTabView: View {
     private let store = HermesSoulStore()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
+        VStack(alignment: .leading, spacing: 14) {
+            JarvisSectionHeader(title: "SOUL // SYSTEM PROMPT")
+            Text("EDITS APPLY ON NEXT SESSION. CLOSE + REOPEN THE CHAT WINDOW AFTER SAVING.")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(0.6)
+                .foregroundColor(DS.Colors.textTertiary)
+
             TextEditor(text: $text)
-                .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 220)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(DS.Colors.textPrimary)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(DS.Colors.surface1)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
+                    }
                 )
+                .frame(minHeight: 240)
                 .onChange(of: text) { _, _ in
                     hasUnsavedChanges = true
                     status = ""
                 }
+
             HStack {
-                Button("Refresh from disk") { reload() }
+                JarvisButton(title: "REFRESH", enabled: true) { reload() }
                 Spacer()
                 if !status.isEmpty {
-                    Text(status).font(.caption).foregroundColor(.secondary)
+                    Text("> \(status.uppercased())")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundColor(DS.Colors.jarvisAccentDim)
                 }
-                Button("Save") { save() }
-                    .disabled(!hasUnsavedChanges)
-                    .keyboardShortcut("s")
+                JarvisButton(title: "SAVE", enabled: hasUnsavedChanges) { save() }
             }
-            footer
+
+            Text("STORED AT ~/.hermes/SOUL.md. DELETE THE FILE TO REGENERATE HERMES'S DEFAULT.")
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .tracking(0.6)
+                .foregroundColor(DS.Colors.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
         .onAppear { reload() }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Soul (system prompt)")
-                .font(.callout.bold())
-            Text("The system prompt Hermes loads at session start. Edits take effect on the next chat session — close + reopen the chat window after saving.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var footer: some View {
-        Text("Stored at ~/.hermes/SOUL.md. Hermes creates a default on first launch — edit freely or delete the file to regenerate the default.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func reload() {
@@ -75,7 +73,7 @@ struct SoulTabView: View {
             hasUnsavedChanges = false
             status = "Saved — restart chat to apply"
         } catch {
-            status = "Save failed: \(error.localizedDescription)"
+            status = "Save failed: \(error.localizedDescription.prefix(30))"
         }
     }
 }
