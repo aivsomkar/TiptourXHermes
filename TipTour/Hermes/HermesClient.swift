@@ -522,6 +522,12 @@ enum HermesClientError: Error, CustomStringConvertible {
     case runtimeMissing
     case subprocessGone
     case malformedResponse(String)
+    case needsSetup(reason: NeedsSetupReason)
+
+    enum NeedsSetupReason: Equatable {
+        case noConfig                       // ~/.hermes/config.yaml missing or malformed
+        case noKeyForProvider(String)       // config names a provider but Keychain has no key
+    }
 
     var description: String {
         switch self {
@@ -531,6 +537,17 @@ enum HermesClientError: Error, CustomStringConvertible {
             return "hermes-runtime subprocess is not running"
         case .malformedResponse(let why):
             return "malformed ACP response: \(why)"
+        case .needsSetup(.noConfig):
+            return "Hermes isn't set up yet. Open Settings → Set up Hermes to pick a provider."
+        case .needsSetup(.noKeyForProvider(let p)):
+            return "Hermes is configured for \(p) but no API key is stored. Open Settings → Set up Hermes to paste one."
         }
+    }
+
+    /// True when the error is a setup-related one the UI should resolve
+    /// with the "Set Up Hermes…" affordance rather than a retry.
+    var isSetupError: Bool {
+        if case .needsSetup = self { return true }
+        return false
     }
 }
