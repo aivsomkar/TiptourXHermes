@@ -57,6 +57,16 @@ struct CompanionPanelView: View {
         }
         .frame(width: 320)
         .background(panelBackground)
+        .sheet(isPresented: $showFirstRunSetup) {
+            FirstRunSetupView(
+                isPresented: $showFirstRunSetup,
+                onSetupComplete: {
+                    // Toggle to force the body to recompute setupCoordinator
+                    // and re-evaluate needsSetup.
+                    setupNeedsRefresh.toggle()
+                }
+            )
+        }
     }
 
     // MARK: - Header
@@ -491,6 +501,12 @@ struct CompanionPanelView: View {
     private var footerSection: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
+                if setupCoordinator.needsSetup {
+                    footerButton("Set up Hermes", systemImage: "key", toggled: false) {
+                        showFirstRunSetup = true
+                    }
+                }
+
                 feedbackButton
 
                 // Always-visible Dev button — gives shipped users access to
@@ -554,6 +570,16 @@ struct CompanionPanelView: View {
     @State private var devOpenAIKeyStatus: String = ""
     @State private var devLumaKeyInput: String = ""
     @State private var devLumaKeyStatus: String = ""
+
+    @State private var showFirstRunSetup: Bool = false
+    @State private var setupNeedsRefresh: Bool = false
+    // Re-evaluate every body call so the button hides as soon as the user
+    // finishes setup. The coordinator is cheap to construct (no I/O until
+    // methods are called).
+    private var setupCoordinator: HermesSetupCoordinator {
+        _ = setupNeedsRefresh   // touch to force a recompute
+        return HermesSetupCoordinator()
+    }
 
     /// One-line bring-your-own-key row. Icon + label on the left, a
     /// SecureField that grows to fill, and a single trailing icon button
