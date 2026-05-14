@@ -66,6 +66,27 @@ chmod +x "$OUT_DIR/hermes-runtime"
 echo "→ Stripping extended attributes"
 xattr -cr "$OUT_DIR" 2>/dev/null || true
 
+# Write a machine-readable version manifest the Swift app can read from
+# Bundle.main.resourceURL. Format: one "key=value" per line, ASCII only.
+# Fields:
+#   hermes_git_ref     The SHA we pinned to in this script
+#   hermes_version     pip-reported version of hermes-agent (may be the
+#                      same across SHAs if upstream hasn't bumped __version__)
+#   python_version     CPython version reported by the bundled interpreter
+#   python_build       astral-sh/python-build-standalone release tag
+#   bundled_at         ISO-8601 UTC timestamp this bundle was produced
+echo "→ Writing hermes-version.txt"
+HERMES_VER="$("$PYTHON_BIN" -c 'import importlib.metadata; print(importlib.metadata.version("hermes-agent"))' 2>/dev/null || echo "unknown")"
+PY_VER="$("$PYTHON_BIN" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
+NOW="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+cat > "$OUT_DIR/hermes-version.txt" <<VERSION_EOF
+hermes_git_ref=$HERMES_GIT_REF
+hermes_version=$HERMES_VER
+python_version=$PY_VER
+python_build=$PYTHON_BUILD
+bundled_at=$NOW
+VERSION_EOF
+
 # Ad-hoc sign every Mach-O file in the runtime so Xcode's outer
 # hardened-runtime sign pass doesn't choke on "code object is not signed
 # at all". Identity `-` means ad-hoc (no team identity); Xcode re-signs
