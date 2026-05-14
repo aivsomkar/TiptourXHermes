@@ -58,6 +58,9 @@ struct CompanionPanelView: View {
         }
         .frame(width: 520)
         .background(panelBackground)
+        .sheet(isPresented: $showSettings) {
+            SettingsSheetView(isPresented: $showSettings)
+        }
     }
 
     // MARK: - Header
@@ -572,6 +575,10 @@ struct CompanionPanelView: View {
             HStack(spacing: 0) {
                 feedbackButton
 
+                footerButton("Settings", systemImage: "gearshape", toggled: showSettings) {
+                    showSettings = true
+                }
+
                 // Always-visible Dev button — gives shipped users access to
                 // the voice-backend picker and BYOK key inputs. The truly
                 // debug-only rows (Detection Overlay, Test Cursor Flight,
@@ -625,6 +632,7 @@ struct CompanionPanelView: View {
     /// still gated by `#if DEBUG` because they're internal-only and
     /// have no use to a casual user.
     @State private var showDevTools: Bool = false
+    @State private var showSettings: Bool = false
     @State private var devGeminiKeyInput: String = ""
     @State private var devGeminiKeyStatus: String = ""
     @State private var devAnthropicKeyInput: String = ""
