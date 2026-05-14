@@ -26,6 +26,28 @@ struct HermesChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // JARVIS-style chat window header — fixed band at the top
+            // with monospaced uppercase title + a thin cyan baseline.
+            HStack {
+                Text("HERMES // CHAT")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .tracking(1.6)
+                    .foregroundColor(DS.Colors.jarvisAccent)
+                Spacer()
+                Text(client.isWorking ? "►  WORKING" : "◌  IDLE")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(1.0)
+                    .foregroundColor(client.isWorking ? DS.Colors.jarvisAccent : DS.Colors.textTertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(DS.Colors.jarvisBorder)
+                    .frame(height: 1)
+            }
+
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -44,14 +66,45 @@ struct HermesChatView: View {
             }
             Divider()
             HStack(spacing: 8) {
-                TextField("Message Hermes…", text: $draft, axis: .vertical)
+                Text(">")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(DS.Colors.jarvisAccent)
+                TextField("message hermes…", text: $draft, axis: .vertical)
                     .lineLimit(1...6)
                     .focused($inputFocused)
                     .onSubmit(send)
-                    .textFieldStyle(.roundedBorder)
-                Button("Send", action: send)
-                    .keyboardShortcut(.return, modifiers: [])
-                    .disabled(draft.isEmpty || client.isWorking)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, design: .monospaced))
+                    .foregroundColor(DS.Colors.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(DS.Colors.surface1)
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .strokeBorder(
+                                    inputFocused ? DS.Colors.jarvisAccent : DS.Colors.jarvisBorder,
+                                    lineWidth: 1
+                                )
+                        }
+                    )
+                Button(action: send) {
+                    Text("SEND")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .tracking(1.6)
+                        .foregroundColor(DS.Colors.jarvisAccent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .strokeBorder(DS.Colors.jarvisAccent, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.return, modifiers: [])
+                .disabled(draft.isEmpty || client.isWorking)
+                .opacity(draft.isEmpty || client.isWorking ? 0.4 : 1.0)
             }
             .padding(12)
         }
@@ -76,22 +129,42 @@ struct ChatTurnRow: View {
             HStack {
                 Spacer(minLength: 40)
                 Text(text)
-                    .padding(10)
-                    .background(Color.accentColor.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .font(.system(size: 13, weight: .regular, design: .default))
+                    .foregroundColor(DS.Colors.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(DS.Colors.jarvisAccentDim.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
+                        }
+                    )
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         case .agent(_, let text, let toolCalls):
             VStack(alignment: .leading, spacing: 6) {
-                Text(text)
-                    .padding(10)
-                    .background(Color.secondary.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: 6) {
+                    Text(">")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundColor(DS.Colors.jarvisAccent)
+                        .padding(.top, 9)
+                    Text(text)
+                        .font(.system(size: 13, weight: .regular, design: .default))
+                        .foregroundColor(DS.Colors.textPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(DS.Colors.surface2)
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 if !toolCalls.isEmpty {
                     ForEach(toolCalls) { record in
                         ToolCallRow(record: record)
-                            .padding(.leading, 12)
+                            .padding(.leading, 18)
                     }
                 }
             }
@@ -102,14 +175,24 @@ struct ChatTurnRow: View {
             // paste a key — no inline button needed.
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.yellow)
-                Text(text)
-                    .font(.callout)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DS.Colors.warning)
+                Text(text.uppercased())
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundColor(DS.Colors.warningText)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(DS.Colors.warning.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .strokeBorder(DS.Colors.warning.opacity(0.3), lineWidth: 1)
+            )
         }
     }
 }
@@ -130,11 +213,14 @@ struct ToolCallRow: View {
         } label: {
             HStack(spacing: 6) {
                 Text("▸")
+                    .foregroundColor(DS.Colors.jarvisAccent)
                 Text(record.argsPreview)
                     .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(DS.Colors.textSecondary)
                 Spacer()
-                Text(record.status.rawValue)
-                    .font(.caption2)
+                Text(record.status.rawValue.uppercased())
+                    .font(.system(.caption2, design: .monospaced))
+                    .tracking(0.8)
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(statusBackground)
                     .clipShape(Capsule())
@@ -145,9 +231,9 @@ struct ToolCallRow: View {
 
     private var statusBackground: Color {
         switch record.status {
-        case .pending:   return Color.yellow.opacity(0.25)
-        case .completed: return Color.green.opacity(0.25)
-        case .failed:    return Color.red.opacity(0.25)
+        case .pending:   return DS.Colors.warning.opacity(0.25)
+        case .completed: return DS.Colors.jarvisAccent.opacity(0.25)
+        case .failed:    return DS.Colors.destructive.opacity(0.25)
         }
     }
 }

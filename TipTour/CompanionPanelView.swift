@@ -63,22 +63,21 @@ struct CompanionPanelView: View {
 
     private var panelHeader: some View {
         HStack {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(statusDotColor)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: statusDotColor.opacity(0.6), radius: 4)
-
-                Text("TipTour")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(DS.Colors.textPrimary)
+            HStack(spacing: 10) {
+                StatusPulseDot(color: statusDotColor)
+                Text("TIPTOUR")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .tracking(2.0)
+                    .foregroundColor(DS.Colors.jarvisAccent)
             }
 
             Spacer()
 
-            Text(statusText)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(DS.Colors.textTertiary)
+            Text(">  \(statusText.uppercased())")
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .tracking(1.0)
+                .foregroundColor(statusDotColor)
+                .opacity(0.85)
 
             pinToggleButton
 
@@ -899,6 +898,34 @@ struct CompanionPanelView: View {
             return "Processing"
         case .responding:
             return "Responding"
+        }
+    }
+}
+
+/// Animated status dot with concentric pulse rings. The inner dot fades
+/// up the outer ring while the outer ring expands and fades out — gives
+/// the "live signal" look without distracting motion.
+fileprivate struct StatusPulseDot: View {
+    let color: Color
+    @State private var animationOn = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color, lineWidth: 1)
+                .frame(width: 16, height: 16)
+                .scaleEffect(animationOn ? 1.4 : 1.0)
+                .opacity(animationOn ? 0.0 : 0.6)
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+                .shadow(color: color.opacity(0.7), radius: 4)
+        }
+        .frame(width: 22, height: 22)
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) {
+                animationOn = true
+            }
         }
     }
 }
