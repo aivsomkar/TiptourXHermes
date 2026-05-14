@@ -733,6 +733,21 @@ struct CompanionPanelView: View {
                     .padding(.bottom, 4)
                     .transition(.opacity)
             }
+
+            // Hermes runtime version — sourced from the bundled
+            // `hermes-version.txt` baked in at build time. Rendered as a
+            // single dim monospaced line so it reads like a build stamp.
+            if let hermesVersionFileURL = HermesRuntimeVersion.bundledURL,
+               let hermesRuntimeVersion = try? HermesRuntimeVersion.read(from: hermesVersionFileURL) {
+                HStack {
+                    Text(hermesRuntimeVersion.shortDisplayString)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(DS.Colors.textTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 10)
+                .padding(.top, 4)
+            }
         }
         .onAppear {
             // Pre-populate the field from Keychain so the user can see
