@@ -81,3 +81,81 @@ final class ProviderHealthCheckerTests: XCTestCase {
         XCTAssertFalse(fetchCalled, "fetcher should not have been called for empty key")
     }
 }
+
+extension ProviderHealthCheckerTests {
+
+    // MARK: - OpenAI
+
+    func testOpenAISuccessOn200() async throws {
+        let fetch: ProviderHealthChecker.Fetch = { request in
+            XCTAssertEqual(request.url?.absoluteString, "https://api.openai.com/v1/models")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test")
+            let data = Data(#"{"data": [{"id": "gpt-4o-mini"}]}"#.utf8)
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 200,
+                httpVersion: nil, headerFields: nil
+            )!
+            return (data, response)
+        }
+        let checker = OpenAIHealthChecker(fetch: fetch)
+        let result = await checker.probe(apiKey: "sk-test")
+        XCTAssertEqual(result, .ok)
+    }
+
+    func testOpenAI401IsAuthFailed() async throws {
+        let fetch: ProviderHealthChecker.Fetch = { request in
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 401,
+                httpVersion: nil, headerFields: nil
+            )!
+            return (Data(), response)
+        }
+        let checker = OpenAIHealthChecker(fetch: fetch)
+        let result = await checker.probe(apiKey: "sk-bogus")
+        XCTAssertEqual(result, .authFailed)
+    }
+
+    // MARK: - Google
+
+    func testGoogleSuccessOn200WithKeyInQueryString() async throws {
+        let fetch: ProviderHealthChecker.Fetch = { request in
+            // Key goes in ?key=… per Google's REST convention. We must
+            // not include any "x-api-key" or "Authorization" header.
+            let url = request.url!
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            XCTAssertEqual(components.host, "generativelanguage.googleapis.com")
+            XCTAssertEqual(components.path, "/v1beta/models")
+            XCTAssertEqual(components.queryItems?.first { $0.name == "key" }?.value, "AIza-test")
+            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            let data = Data(#"{"models": [{"name": "models/gemini-flash-lite-latest"}]}"#.utf8)
+            let response = HTTPURLResponse(
+                url: url, statusCode: 200, httpVersion: nil, headerFields: nil
+            )!
+            return (data, response)
+        }
+        let checker = GoogleHealthChecker(fetch: fetch)
+        let result = await checker.probe(apiKey: "AIza-test")
+        XCTAssertEqual(result, .ok)
+    }
+
+    func testGoogle403IsAuthFailed() async throws {
+        let fetch: ProviderHealthChecker.Fetch = { request in
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: 403,
+                httpVersion: nil, headerFields: nil
+            )!
+            return (Data(), response)
+        }
+        let checker = GoogleHealthChecker(fetch: fetch)
+        let result = await checker.probe(apiKey: "AIza-bogus")
+        XCTAssertEqual(result, .authFailed)
+    }
+
+    // MARK: - Factory
+
+    func testHealthCheckerFactoryReturnsCorrectImplementation() {
+        XCTAssertTrue(ProviderHealthCheckerFactory.make(for: .anthropic) is AnthropicHealthChecker)
+        XCTAssertTrue(ProviderHealthCheckerFactory.make(for: .openai) is OpenAIHealthChecker)
+        XCTAssertTrue(ProviderHealthCheckerFactory.make(for: .google) is GoogleHealthChecker)
+    }
+}

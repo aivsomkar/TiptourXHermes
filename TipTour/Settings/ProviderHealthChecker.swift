@@ -63,3 +63,63 @@ struct AnthropicHealthChecker: ProviderHealthChecker {
         }
     }
 }
+
+struct OpenAIHealthChecker: ProviderHealthChecker {
+    static let endpoint = URL(string: "https://api.openai.com/v1/models")!
+    private let fetch: Fetch
+
+    init(fetch: @escaping Fetch = realFetch) {
+        self.fetch = fetch
+    }
+
+    func probe(apiKey: String) async -> ProbeResult {
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if key.isEmpty { return .emptyKey }
+        var request = URLRequest(url: Self.endpoint)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        do {
+            let (_, response) = try await fetch(request)
+            return AnthropicHealthChecker.classify(response: response)
+        } catch {
+            return .networkError("\(error)")
+        }
+    }
+}
+
+struct GoogleHealthChecker: ProviderHealthChecker {
+    static let endpointBase = URL(string: "https://generativelanguage.googleapis.com/v1beta/models")!
+    private let fetch: Fetch
+
+    init(fetch: @escaping Fetch = realFetch) {
+        self.fetch = fetch
+    }
+
+    func probe(apiKey: String) async -> ProbeResult {
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if key.isEmpty { return .emptyKey }
+        var components = URLComponents(url: Self.endpointBase, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "key", value: key)]
+        guard let url = components.url else { return .networkError("URL construction failed") }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        do {
+            let (_, response) = try await fetch(request)
+            return AnthropicHealthChecker.classify(response: response)
+        } catch {
+            return .networkError("\(error)")
+        }
+    }
+}
+
+/// Returns the right checker for a given Provider enum case. Used by
+/// ModelsTabView to dispatch on the user's current selection.
+enum ProviderHealthCheckerFactory {
+    static func make(for provider: HermesConfigBootstrapper.Provider) -> any ProviderHealthChecker {
+        switch provider {
+        case .anthropic: return AnthropicHealthChecker()
+        case .openai:    return OpenAIHealthChecker()
+        case .google:    return GoogleHealthChecker()
+        }
+    }
+}
