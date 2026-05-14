@@ -87,6 +87,24 @@ final class GeminiLiveSession: ObservableObject {
     /// `{ok: true, text: <hermes reply>}` so Gemini speaks the answer.
     var onAskHermes: ((_ id: String, _ task: String) async -> [String: Any])?
 
+    /// Fired when Gemini calls `click_element(label, box_2d?)`. The handler
+    /// must resolve the label to a screen position (same way as
+    /// `onPointAtElement`), visibly fly the cursor, then actually post a
+    /// click via `ActionExecutor`. Gated by the host's "Hermes can drive
+    /// my Mac" toggle — when off, the handler should return an error and
+    /// not act.
+    var onClickElement: ((_ id: String, _ label: String, _ box2DNormalized: [Int]?, _ screenshotJPEG: Data?) async -> [String: Any])?
+
+    /// Fired when Gemini calls `type_text(text)`. The handler should paste
+    /// the text into whatever currently has keyboard focus. Gated by the
+    /// same "Hermes can drive my Mac" toggle as `onClickElement`.
+    var onTypeText: ((_ id: String, _ text: String) async -> [String: Any])?
+
+    /// Fired when Gemini calls `press_keyboard_shortcut(shortcut)`. Posts
+    /// the chord at HID level. Gated by the same "Hermes can drive my Mac"
+    /// toggle as `onClickElement`.
+    var onPressKeyboardShortcut: ((_ id: String, _ shortcut: String) async -> [String: Any])?
+
     // MARK: - Dependencies
 
     private let geminiClient = GeminiLiveClient()
@@ -966,6 +984,31 @@ final class GeminiLiveSession: ObservableObject {
                     response = await handler(id, task)
                 } else {
                     print("[GeminiLiveSession] ask_hermes called with no handler or empty task")
+                }
+
+            case "click_element":
+                let label = (args["label"] as? String) ?? ""
+                let box2D = (args["box_2d"] as? [Int]).flatMap { $0.count == 4 ? $0 : nil }
+                if !label.isEmpty, let handler = self.onClickElement {
+                    response = await handler(id, label, box2D, screenshot)
+                } else {
+                    print("[GeminiLiveSession] click_element called with no handler or empty label")
+                }
+
+            case "type_text":
+                let text = (args["text"] as? String) ?? ""
+                if !text.isEmpty, let handler = self.onTypeText {
+                    response = await handler(id, text)
+                } else {
+                    print("[GeminiLiveSession] type_text called with no handler or empty text")
+                }
+
+            case "press_keyboard_shortcut":
+                let shortcut = (args["shortcut"] as? String) ?? ""
+                if !shortcut.isEmpty, let handler = self.onPressKeyboardShortcut {
+                    response = await handler(id, shortcut)
+                } else {
+                    print("[GeminiLiveSession] press_keyboard_shortcut called with no handler or empty shortcut")
                 }
 
             default:

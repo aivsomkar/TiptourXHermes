@@ -634,6 +634,14 @@ struct CompanionPanelView: View {
 
     private var devToolsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
+            sectionHeader("HERMES")
+
+            hermesGUIAutopilotRow
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+
+            Spacer().frame(height: 6)
+
             #if DEBUG
             sectionHeader("DEBUG")
 
@@ -649,6 +657,44 @@ struct CompanionPanelView: View {
             #endif
         }
         .padding(.vertical, 4)
+    }
+
+    /// Master gate for Hermes' destructive MCP tools (click_element,
+    /// type_text, press_keyboard_shortcut). Off by default; flipping it on
+    /// allows Hermes to drive the user's mouse and keyboard.
+    private var hermesGUIAutopilotRow: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "cursorarrow.click.2")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(
+                    companionManager.hermesGUIAutopilotEnabled
+                        ? DS.Colors.accent
+                        : DS.Colors.textTertiary
+                )
+                .frame(width: 16)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Hermes can drive my Mac")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(DS.Colors.textSecondary)
+                Text("Allows Hermes' MCP tools to click, type, and press keyboard shortcuts on your apps. Off by default.")
+                    .font(.system(size: 10))
+                    .foregroundColor(DS.Colors.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: Binding(
+                get: { companionManager.hermesGUIAutopilotEnabled },
+                set: { companionManager.setHermesGUIAutopilotEnabled($0) }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+            .tint(DS.Colors.accent)
+            .scaleEffect(0.8)
+        }
     }
 
     /// Compact uppercase section label used inside the Dev panel.
