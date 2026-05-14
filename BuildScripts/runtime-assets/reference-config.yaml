@@ -1,0 +1,12 @@
+# Reference shape for ~/.hermes/config.yaml.
+# HermesConfigBootstrapper emits this template with the user's chosen
+# provider substituted in. Provider names match keys in Hermes's
+# models_dev_cache.json (verified 2026-05-14): anthropic, openai, google.
+#
+# Default model per provider:
+#   anthropic → anthropic/claude-haiku-4-5     (fast, cheap, capable)
+#   openai    → openai/gpt-4o-mini             (fast, cheap)
+#   google    → google/gemini-flash-lite-latest (fast, cheap)
+model:
+  default: "<provider>/<model>"
+  provider: "<provider>"
