@@ -126,4 +126,14 @@ enum KeychainStore {
         set { set(newValue ?? "", forKey: "lumaAPIKey") }
     }
 
+    /// Provider key for Hermes's "google" provider. Same value the
+    /// user would put in GEMINI_API_KEY env var. Separate from
+    /// `geminiAPIKey` (used by GeminiLiveSession's WebSocket) so the
+    /// two surfaces can have different keys if the user chooses — most
+    /// users will just paste the same value into both.
+    static var googleAPIKey: String? {
+        get { get(forKey: "googleAPIKey") }
+        set { set(newValue ?? "", forKey: "googleAPIKey") }
+    }
+
 }
