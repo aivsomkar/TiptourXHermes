@@ -147,12 +147,14 @@ final class CompanionManager: ObservableObject {
     /// Jarvis sound cue: "listening" when the mic opens, "working" when
     /// the model starts responding or running a task.
     private func handleVoiceStateTransition(to newState: CompanionVoiceState) {
-        switch newState {
-        case .listening:
-            playVoiceStateSound(named: "jarvislistening")
-        case .responding, .processing:
-            playVoiceStateSound(named: "jarvisworking")
-        case .idle:
+        // Voice-state sound cues (jarvislistening/jarvisworking) are
+        // disabled: AVAudioPlayer playback interrupts the shared
+        // AVAudioEngine that runs the mic + Gemini's speaker, killing the
+        // engine and causing TTS chunks to drop after a long ask_hermes
+        // call. Visual cues (Arc Reactor, waveform) signal state instead.
+        // We still halt any in-flight cue on .idle in case one was left
+        // playing from an earlier app version.
+        if newState == .idle {
             voiceStateSoundPlayer?.stop()
         }
     }
