@@ -114,124 +114,158 @@ enum NekoDirection: String, CaseIterable {
 
 /// Arc Reactor cursor driven by TipTour's voice state.
 ///
-/// Frame mapping (ReactorFrame1–5 assets):
-///   Frame 1 = inactive/dim (reactor offline)
-///   Frame 5 = fully active (reactor at full power)
+/// Renders two stacked SVG layers (`NormalState` = passive, `ActiveState` =
+/// fully lit with the inner glow cursor blazing) and cross-fades between
+/// them based on `activationLevel` (0 → fully passive, 1 → fully active).
 ///
 /// Behaviour:
-///   On appear  → boot animation Frame 1 → 2 → 3 → 4 → 5 (once)
-///   .idle      → hold Frame 1
-///   .listening → hold Frame 3 (awake, waiting)
-///   .responding → fast blink Frame 4 ↔ 5 (reactor pulses with speech)
-///   .processing → wave sweep Frame 1 → 5 → 1 (reactor scanning/thinking)
+///   On appear            → soft scale + fade-in entrance, rests in passive
+///   .idle                → passive (activationLevel = 0)
+///   .listening / .responding / .processing
+///                        → cross-fades by `audioPowerLevel` so the reactor
+///                          breathes with the user's voice and Hermes' speech
+///
+/// Note: the reactor never flies during a point-at-element gesture. The
+/// glow cursor (`ArcReactorGlowCursorView`) detaches and flies on its own —
+/// the reactor stays anchored at the user's mouse cursor.
 struct ArcReactorCursorView: View {
 
     let position: CGPoint
     let opacity: Double
-    let flightScale: CGFloat
     let voiceState: CompanionVoiceState
+    /// 0…1 power level from the live mic / TTS audio. Used to cross-fade the
+    /// reactor between passive and active in time with the user's voice or
+    /// Hermes' reply, when the voice session is engaged.
+    let audioPowerLevel: CGFloat
 
     private let displaySize: CGFloat = 56
-    /// Seconds between each blink tick — drives the responding blink and
-    /// the processing wave sweep.
-    private let blinkTickInterval: Double = 0.13
+    /// Smoothing time for activation changes — short enough to feel reactive,
+    /// long enough that we don't strobe on every audio sample.
+    private let activationSmoothing: Double = 0.18
 
-    /// Continuous position in the 1–5 frame range. SwiftUI interpolates this
-    /// value during withAnimation blocks, producing seamless blends between
-    /// adjacent frames rather than discrete cuts.
-    @State private var frameProgress: Double = 1.0
-    @State private var bootComplete: Bool = false
-    @State private var waveStepIndex: Int = 0
-
-    private static let wavePattern: [Int] = [1, 2, 3, 4, 5, 4, 3, 2]
+    /// Where the cross-fade sits along the passive → active axis. Driven
+    /// from `audioPowerLevel` + `voiceState` and animated on change.
+    @State private var activationLevel: Double = 0.0
+    /// Boot scale (0.6 → 1.0) so the reactor pops into existence rather than
+    /// snapping in. Runs once per appear.
+    @State private var bootScale: CGFloat = 0.6
+    @State private var bootOpacity: Double = 0.0
+    /// True after the launch sweep has finished and we've handed off control
+    /// to `voiceState` + `audioPowerLevel`. Gates `recomputeActivationLevel`
+    /// so audio-driven updates can't stomp the in-progress boot animation.
+    @State private var bootSweepComplete: Bool = false
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: blinkTickInterval, paused: false)) { context in
-            reactorImageView
-                .frame(width: displaySize, height: displaySize)
-                .scaleEffect(flightScale)
-                .opacity(opacity)
-                .position(position)
-                .onChange(of: context.date) { _, _ in
-                    advanceBlinkTick()
-                }
-                .onChange(of: voiceState) { _, newState in
-                    applyVoiceStateTransition(newState)
-                }
-        }
-        .onAppear {
-            runBootAnimation()
-        }
-    }
-
-    @ViewBuilder
-    private var reactorImageView: some View {
         ZStack {
-            ForEach(1...5, id: \.self) { frameIndex in
-                Image("ReactorFrame\(frameIndex)")
-                    .resizable()
-                    .scaledToFit()
-                    .opacity(opacityForFrame(frameIndex))
-            }
+            Image("NormalState")
+                .resizable()
+                .scaledToFit()
+                .opacity(1.0 - activationLevel)
+            Image("ActiveState")
+                .resizable()
+                .scaledToFit()
+                .opacity(activationLevel)
         }
-        .mask(
-            RadialGradient(
-                gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: .white, location: 0.85),
-                    .init(color: .clear,  location: 1.0)
-                ]),
-                center: .center,
-                startRadius: 0,
-                endRadius: displaySize / 2
-            )
-        )
-    }
-
-    /// Opacity for a given frame based on its distance from frameProgress.
-    /// Adjacent frames blend together as frameProgress passes between them.
-    private func opacityForFrame(_ index: Int) -> Double {
-        max(0.0, 1.0 - abs(frameProgress - Double(index)))
-    }
-
-    /// One smooth easeInOut sweep from Frame 1 to Frame 5, then holds before
-    /// handing off to voiceState.
-    private func runBootAnimation() {
-        withAnimation(.easeInOut(duration: 1.4)) {
-            frameProgress = 5.0
+        .frame(width: displaySize, height: displaySize)
+        .scaleEffect(bootScale)
+        .opacity(opacity * bootOpacity)
+        .position(position)
+        .onAppear(perform: runBootEntrance)
+        .onChange(of: voiceState) { _, _ in
+            recomputeActivationLevel()
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            bootComplete = true
-            applyVoiceStateTransition(voiceState)
+        .onChange(of: audioPowerLevel) { _, _ in
+            recomputeActivationLevel()
         }
     }
 
-    private func applyVoiceStateTransition(_ newState: CompanionVoiceState) {
-        guard bootComplete else { return }
-        switch newState {
-        case .idle:
-            withAnimation(.easeInOut(duration: 0.5)) { frameProgress = 1.0 }
-        case .listening:
-            withAnimation(.easeInOut(duration: 0.5)) { frameProgress = 3.0 }
-        case .responding, .processing:
-            break
+    /// Launch sequence: scale + fade in (passive), sweep up to fully active,
+    /// hold briefly, then ease back down to passive — at which point we hand
+    /// off to `voiceState` + `audioPowerLevel`. The reactor visibly "ignites"
+    /// once at launch instead of just snapping in.
+    private func runBootEntrance() {
+        bootScale = 0.6
+        bootOpacity = 0.0
+        activationLevel = 0.0
+        bootSweepComplete = false
+
+        // Stage 1: scale + fade in while still passive.
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) {
+            bootScale = 1.0
+            bootOpacity = 1.0
+        }
+
+        // Stage 2: sweep passive → fully active.
+        withAnimation(.easeInOut(duration: 0.7).delay(0.25)) {
+            activationLevel = 1.0
+        }
+
+        // Stage 3: ease back down to passive, then hand off to voiceState.
+        withAnimation(.easeInOut(duration: 0.65).delay(1.15)) {
+            activationLevel = 0.0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) {
+            bootSweepComplete = true
+            recomputeActivationLevel()
         }
     }
 
-    /// Drives the responding blink (4 ↔ 5) and processing wave each tick.
-    private func advanceBlinkTick() {
-        guard bootComplete else { return }
+    /// Map (voiceState, audioPowerLevel) → 0…1 cross-fade target.
+    ///
+    /// `audioPowerLevel` is mic-derived so it's only meaningful while the
+    /// user is speaking (during `.listening`). During `.responding` Hermes
+    /// is speaking and the mic is effectively silent — we hold the reactor
+    /// near full active so it visibly tracks "Hermes is talking" rather than
+    /// dimming because there's no mic input.
+    private func recomputeActivationLevel() {
+        // Boot sweep owns activationLevel — don't fight it.
+        guard bootSweepComplete else { return }
+        let target: Double
         switch voiceState {
+        case .idle:
+            target = 0.0
+        case .listening:
+            let clamped = max(0, min(1, Double(audioPowerLevel)))
+            // 0.25 floor so the reactor reads as "engaged" between syllables;
+            // 0.75 head-room above that for the mic-driven breathing.
+            target = 0.25 + (clamped * 0.75)
         case .responding:
-            let target: Double = (frameProgress >= 4.5) ? 4.0 : 5.0
-            withAnimation(.easeInOut(duration: 0.09)) { frameProgress = target }
+            target = 0.95
         case .processing:
-            waveStepIndex = (waveStepIndex + 1) % Self.wavePattern.count
-            let target = Double(Self.wavePattern[waveStepIndex])
-            withAnimation(.easeInOut(duration: 0.09)) { frameProgress = target }
-        case .idle, .listening:
-            break
+            target = 0.55
         }
+        withAnimation(.easeOut(duration: activationSmoothing)) {
+            activationLevel = target
+        }
+    }
+}
+
+/// The four-triangle "glow cursor" that detaches from the arc reactor and
+/// flies to a UI element during a point-at gesture. Rendered separately from
+/// `ArcReactorCursorView` so the reactor stays put at the user's mouse while
+/// only the glow makes the trip.
+struct ArcReactorGlowCursorView: View {
+    let position: CGPoint
+    let opacity: Double
+    let scale: CGFloat
+    let rotationDegrees: Double
+    /// Visible frame size in points. Two callers today:
+    ///   • Neko mode point-at flight uses ~110pt so the burst reads as a
+    ///     dramatic projectile that just ejected from the reactor's core.
+    ///   • Default cursor (Neko mode off) uses ~48pt so the glow lives at a
+    ///     normal cursor size and doesn't dominate the screen.
+    var displaySize: CGFloat = 110
+
+    var body: some View {
+        Image("GlowCursor")
+            .resizable()
+            .scaledToFit()
+            .frame(width: displaySize, height: displaySize)
+            .rotationEffect(.degrees(rotationDegrees))
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .position(position)
+            .allowsHitTesting(false)
     }
 }
 

@@ -6,9 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		28F22CCD2F56440300A0FC59 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		28F22CBF2F56440300A0FC59 /* TipTour.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TipTour.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		28F22CBF2F56440300A0FC59 /* TipTour.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TipTour.app; path = TipTour_Hermes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F22CCC2F56440300A0FC59 /* tiptour-macosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F22CD62F56440300A0FC59 /* tiptour-macosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "tiptour-macosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -35,15 +32,11 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		28F22CC12F56440300A0FC59 /* TipTour */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = TipTour;
 			sourceTree = "<group>";
 		};
 		28F22CCF2F56440300A0FC59 /* TipTourTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = TipTourTests;
 			sourceTree = "<group>";
 		};
@@ -682,12 +675,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 28F22CB72F56440300A0FC59 /* Project object */;
 }

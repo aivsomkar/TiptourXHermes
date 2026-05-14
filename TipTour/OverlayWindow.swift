@@ -108,22 +108,23 @@ struct BlueCursorView: View {
     @ObservedObject var companionManager: CompanionManager
 
     @State private var cursorPosition: CGPoint
+    /// Anchor position for the Arc Reactor display. Tracks the user's actual
+    /// mouse cursor continuously — even during a point-at flight, when
+    /// `cursorPosition` has been hijacked by the bezier animator and is moving
+    /// toward a target. The reactor sits here so it stays with the user while
+    /// the glow cursor flies away from it.
+    @State private var reactorAnchorPosition: CGPoint
     @State private var isCursorOnThisScreen: Bool
 
     /// Horizontal offset from `cursorPosition` to the LEFT edge of
     /// bubbles / labels that sit next to the cursor. Needs to clear
-    /// the visible cursor glyph so the bubble doesn't get overdrawn.
-    /// Triangle is 16pt wide (±8), cat is 32pt (±16) — so we push
-    /// the bubble further right in Neko mode.
-    private var bubbleLeftOffsetFromCursor: CGFloat {
-        companionManager.isNekoModeEnabled ? 22 : 10
-    }
+    /// the visible cursor glyph so the bubble doesn't get overdrawn —
+    /// sized for the glow cursor (48pt, default mode) and the cat
+    /// sprite (32pt, Neko mode), both ~similar visual footprint.
+    private let bubbleLeftOffsetFromCursor: CGFloat = 22
 
-    /// Vertical offset from `cursorPosition` to the TOP edge of
-    /// bubbles. Same sizing logic as the horizontal offset.
-    private var bubbleTopOffsetFromCursor: CGFloat {
-        companionManager.isNekoModeEnabled ? 24 : 18
-    }
+    /// Vertical offset from `cursorPosition` to the TOP edge of bubbles.
+    private let bubbleTopOffsetFromCursor: CGFloat = 24
 
     init(screenFrame: CGRect, isFirstAppearance: Bool, companionManager: CompanionManager) {
         self.screenFrame = screenFrame
@@ -136,6 +137,7 @@ struct BlueCursorView: View {
         let localX = mouseLocation.x - screenFrame.origin.x
         let localY = screenFrame.height - (mouseLocation.y - screenFrame.origin.y)
         _cursorPosition = State(initialValue: CGPoint(x: localX + 35, y: localY + 25))
+        _reactorAnchorPosition = State(initialValue: CGPoint(x: localX + 35, y: localY + 25))
         _isCursorOnThisScreen = State(initialValue: screenFrame.contains(mouseLocation))
     }
     @State private var timer: Timer?
@@ -341,11 +343,55 @@ struct BlueCursorView: View {
             // velocity and animates a 2-frame run cycle. Behavior is
             // unchanged — purely a visual personality toggle.
             if companionManager.isNekoModeEnabled {
+                // Reactor anchored at the user's mouse cursor at all times.
+                // During a point-at flight, the reactor stays here while the
+                // glow cursor (below) flies to the target. The reactor's
+                // visibility on this screen depends only on whether the mouse
+                // is on this screen — not on the buddy navigation mode, because
+                // the reactor never leaves the cursor.
+                let reactorVisibleOnThisScreen: Bool = {
+                    if companionManager.detectedElementScreenLocation != nil {
+                        // While another screen owns the glow flight, this screen
+                        // can still show the reactor — it lives at the user's
+                        // mouse, which is necessarily on exactly one screen.
+                        return isCursorOnThisScreen
+                    }
+                    return isCursorOnThisScreen
+                }()
                 ArcReactorCursorView(
+                    position: reactorAnchorPosition,
+                    opacity: reactorVisibleOnThisScreen ? cursorOpacity : 0,
+                    voiceState: companionManager.voiceState,
+                    audioPowerLevel: companionManager.currentAudioPowerLevel
+                )
+                .animation(
+                    .spring(response: 0.2, dampingFraction: 0.6, blendDuration: 0),
+                    value: reactorAnchorPosition
+                )
+
+                // Glow cursor: only materialises when the buddy is in flight
+                // toward (or pointing at) a target. It launches from the
+                // reactor's position and flies on its own.
+                let glowVisible: Bool = buddyIsVisibleOnThisScreen
+                    && buddyNavigationMode != .followingCursor
+                ArcReactorGlowCursorView(
+                    position: cursorPosition,
+                    opacity: glowVisible ? cursorOpacity : 0,
+                    scale: buddyFlightScale,
+                    rotationDegrees: triangleRotationDegrees
+                )
+            } else {
+                // Default cursor (Neko mode off) — the glow cursor IS the
+                // cursor: always visible, follows the mouse during normal
+                // tracking, flies along the bezier arc during a point-at.
+                // Sized smaller than the Neko-mode flight burst so it reads
+                // as a cursor, not a UFO.
+                ArcReactorGlowCursorView(
                     position: cursorPosition,
                     opacity: buddyIsVisibleOnThisScreen ? cursorOpacity : 0,
-                    flightScale: buddyFlightScale,
-                    voiceState: companionManager.voiceState
+                    scale: buddyFlightScale,
+                    rotationDegrees: triangleRotationDegrees,
+                    displaySize: 48
                 )
                 .animation(
                     buddyNavigationMode == .followingCursor
@@ -353,29 +399,10 @@ struct BlueCursorView: View {
                         : nil,
                     value: cursorPosition
                 )
-            } else {
-                // During navigation: NO implicit animation — the frame-by-frame bezier
-                // timer controls position directly at 60fps for a smooth arc flight.
-                Triangle()
-                    .fill(DS.Colors.overlayCursorBlue)
-                    .frame(width: 16, height: 16)
-                    .rotationEffect(.degrees(triangleRotationDegrees))
-                    .shadow(color: DS.Colors.overlayCursorBlue, radius: 8 + (buddyFlightScale - 1.0) * 20, x: 0, y: 0)
-                    .scaleEffect(buddyFlightScale)
-                    .opacity(buddyIsVisibleOnThisScreen ? cursorOpacity : 0)
-                    .scaleEffect(buddyFlightScale)
-                    .position(cursorPosition)
-                    .animation(
-                        buddyNavigationMode == .followingCursor
-                            ? .spring(response: 0.2, dampingFraction: 0.6, blendDuration: 0)
-                            : nil,
-                        value: cursorPosition
-                    )
-                    .animation(.easeIn(duration: 0.25), value: companionManager.voiceState)
-                    .animation(
-                        buddyNavigationMode == .navigatingToTarget ? nil : .easeInOut(duration: 0.3),
-                        value: triangleRotationDegrees
-                    )
+                .animation(
+                    buddyNavigationMode == .navigatingToTarget ? nil : .easeInOut(duration: 0.3),
+                    value: triangleRotationDegrees
+                )
             }
 
             // Blue waveform — floats next to the cursor and stays visible
@@ -484,12 +511,21 @@ struct BlueCursorView: View {
             let mouseLocation = NSEvent.mouseLocation
             self.isCursorOnThisScreen = self.screenFrame.contains(mouseLocation)
 
+            // Update the reactor's anchor every tick, no matter what the buddy
+            // is doing. In Neko mode the reactor sits at the user's cursor
+            // continuously — including during a point-at flight, when the
+            // glow cursor has detached and is flying to its target.
+            let swiftUIPosition = self.convertScreenPointToSwiftUICoordinates(mouseLocation)
+            let reactorX = swiftUIPosition.x + 35
+            let reactorY = swiftUIPosition.y + 25
+            self.reactorAnchorPosition = CGPoint(x: reactorX, y: reactorY)
+
             // During forward flight or pointing, the buddy is NOT interrupted by
             // mouse movement — it completes its full animation and return flight.
             // Only during the RETURN flight do we allow cursor movement to cancel
             // (so the buddy snaps to following if the user moves while it's flying back).
             if self.buddyNavigationMode == .navigatingToTarget && self.isReturningToCursor {
-                let currentMouseInSwiftUI = self.convertScreenPointToSwiftUICoordinates(mouseLocation)
+                let currentMouseInSwiftUI = swiftUIPosition
                 let distanceFromNavigationStart = hypot(
                     currentMouseInSwiftUI.x - self.cursorPositionWhenNavigationStarted.x,
                     currentMouseInSwiftUI.y - self.cursorPositionWhenNavigationStarted.y
@@ -505,11 +541,9 @@ struct BlueCursorView: View {
                 return
             }
 
-            // Normal cursor following
-            let swiftUIPosition = self.convertScreenPointToSwiftUICoordinates(mouseLocation)
-            let buddyX = swiftUIPosition.x + 35
-            let buddyY = swiftUIPosition.y + 25
-            self.cursorPosition = CGPoint(x: buddyX, y: buddyY)
+            // Normal cursor following — cursorPosition and reactorAnchorPosition
+            // are the same point in followingCursor mode (reactor IS the cursor).
+            self.cursorPosition = CGPoint(x: reactorX, y: reactorY)
         }
     }
 
