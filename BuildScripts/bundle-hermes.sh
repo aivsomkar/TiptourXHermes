@@ -11,7 +11,11 @@ PYTHON_VERSION="3.11.15"
 PYTHON_BUILD="20260510"
 PYTHON_ARCH="aarch64-apple-darwin"
 PYTHON_FLAVOUR="install_only"
-HERMES_GIT_REF="${HERMES_GIT_REF:-main}"
+# Pinned 2026-05-14. Reproducible-build requirement: every CI/release
+# build resolves the same Hermes source. To upgrade, replace this SHA
+# AND rebuild reference-config.yaml against the new model_dev_cache
+# (provider names rarely change but model defaults do).
+HERMES_GIT_REF="${HERMES_GIT_REF:-6122a79aab45041d8b7c8d775f95be3ac6ce579f}"
 
 PROJECT_DIR="${SRCROOT:-$(pwd)}"
 OUT_DIR="${1:-$PROJECT_DIR/build/hermes-runtime}"
