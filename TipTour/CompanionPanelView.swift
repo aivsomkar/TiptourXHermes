@@ -16,6 +16,7 @@ struct CompanionPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             panelHeader
+            arcReactorSection
             Divider()
                 .background(DS.Colors.borderSubtle)
                 .padding(.horizontal, 16)
@@ -55,49 +56,128 @@ struct CompanionPanelView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
         }
-        .frame(width: 320)
+        .frame(width: 520)
         .background(panelBackground)
     }
 
     // MARK: - Header
 
     private var panelHeader: some View {
-        HStack {
+        VStack(spacing: 0) {
+            // Top status bar
             HStack(spacing: 10) {
                 StatusPulseDot(color: statusDotColor)
-                Text("TIPTOUR")
+                Text("TIPTOUR // VOICE OS")
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .tracking(2.0)
                     .foregroundColor(DS.Colors.jarvisAccent)
+
+                Spacer()
+
+                Text(">  \(statusText.uppercased())")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(1.0)
+                    .foregroundColor(statusDotColor)
+                    .opacity(0.85)
+
+                pinToggleButton
+
+                Button(action: {
+                    NotificationCenter.default.post(name: .tipTourDismissPanel, object: nil)
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(DS.Colors.textTertiary)
+                        .frame(width: 20, height: 20)
+                        .background(Circle().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .pointerCursor()
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
 
-            Spacer()
+            // Tech baseline under the header
+            Rectangle()
+                .fill(DS.Colors.jarvisBorder)
+                .frame(height: 1)
+                .padding(.horizontal, 4)
+        }
+    }
 
-            Text(">  \(statusText.uppercased())")
+    /// Central Arc Reactor + 4-up status grid. The dashboard's visual
+    /// centerpiece — driven by voiceState (color) and the live mic-power
+    /// level (pulse intensity).
+    private var arcReactorSection: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 16) {
+                // Left side: status grid
+                VStack(alignment: .leading, spacing: 8) {
+                    statusGridRow(label: "MIC", granted: companionManager.hasMicrophonePermission)
+                    statusGridRow(label: "SCREEN", granted: companionManager.hasScreenRecordingPermission)
+                    statusGridRow(label: "A11Y", granted: companionManager.hasAccessibilityPermission)
+                    statusGridRow(label: "CONTENT", granted: companionManager.hasScreenContentPermission)
+                }
+                .frame(width: 130, alignment: .leading)
+
+                Spacer()
+
+                // Centerpiece
+                ArcReactorView(
+                    pulseIntensity: companionManager.currentAudioPowerLevel,
+                    stateColor: arcReactorColor
+                )
+
+                Spacer()
+
+                // Right side: clock + provider info
+                VStack(alignment: .trailing, spacing: 8) {
+                    LiveClockView()
+                    if let provider = HermesSetupCoordinator().configuredProvider {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("PROVIDER")
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .tracking(1.2)
+                                .foregroundColor(DS.Colors.textTertiary)
+                            Text(provider.displayName.uppercased())
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .tracking(1.0)
+                                .foregroundColor(DS.Colors.jarvisAccent)
+                        }
+                    }
+                }
+                .frame(width: 130, alignment: .trailing)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+        }
+    }
+
+    /// Returns the cyan tint for the Arc Reactor based on voice state.
+    private var arcReactorColor: Color {
+        switch companionManager.voiceState {
+        case .idle:       return DS.Colors.jarvisAccentDim
+        case .listening:  return DS.Colors.jarvisAccent
+        case .responding: return DS.Colors.cyan300
+        case .processing: return DS.Colors.warning
+        }
+    }
+
+    /// One row of the status grid: a small filled dot + monospaced label.
+    private func statusGridRow(label: String, granted: Bool) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(granted ? DS.Colors.jarvisAccent : DS.Colors.textTertiary)
+                .frame(width: 6, height: 6)
+                .shadow(color: granted ? DS.Colors.jarvisAccent.opacity(0.6) : .clear, radius: 3)
+            Text(label)
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(1.0)
-                .foregroundColor(statusDotColor)
-                .opacity(0.85)
-
-            pinToggleButton
-
-            Button(action: {
-                NotificationCenter.default.post(name: .tipTourDismissPanel, object: nil)
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(DS.Colors.textTertiary)
-                    .frame(width: 20, height: 20)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(0.08))
-                    )
-            }
-            .buttonStyle(.plain)
-            .pointerCursor()
+                .foregroundColor(granted ? DS.Colors.textPrimary : DS.Colors.textTertiary)
+            Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
     }
 
     /// Pushpin toggle. When on, the panel stays visible regardless of
@@ -860,12 +940,33 @@ struct CompanionPanelView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(DS.Colors.background)
+
+            // Very subtle horizontal scan-line pattern — 1px lines every
+            // 3px at low opacity. Just enough to give the surface a "CRT"
+            // texture without being distracting.
+            scanLineOverlay
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(DS.Colors.jarvisBorder, lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 10)
         .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
         .shadow(color: DS.Colors.jarvisGlow, radius: 24, x: 0, y: 0)
+    }
+
+    private var scanLineOverlay: some View {
+        Canvas { ctx, size in
+            let lineSpacing: CGFloat = 3
+            let lineColor = DS.Colors.jarvisAccent.opacity(0.04)
+            var y: CGFloat = 0
+            while y < size.height {
+                let rect = CGRect(x: 0, y: y, width: size.width, height: 1)
+                ctx.fill(Path(rect), with: .color(lineColor))
+                y += lineSpacing
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     private var statusDotColor: Color {
@@ -927,5 +1028,111 @@ fileprivate struct StatusPulseDot: View {
                 animationOn = true
             }
         }
+    }
+}
+
+/// Animated Arc Reactor centerpiece for the JARVIS dashboard. Renders
+/// concentric cyan rings with a slow rotating tick-marked outer ring,
+/// a static glowing inner core, and a subtle breathing pulse driven by
+/// `pulseIntensity` (0.0 = idle, 1.0 = peak mic activity).
+fileprivate struct ArcReactorView: View {
+    /// 0.0 — 1.0 — drives the outer-ring brightness + glow radius.
+    /// Wire this to mic power level for live reactivity.
+    let pulseIntensity: CGFloat
+
+    /// State color: cyan when active, dim when idle, red on error.
+    let stateColor: Color
+
+    @State private var rotation: Double = 0
+    @State private var breathing: Bool = false
+
+    var body: some View {
+        ZStack {
+            // Outermost: thin rotating ring with tick marks
+            outerTickRing
+                .rotationEffect(.degrees(rotation))
+
+            // Middle: thicker cyan stroke
+            Circle()
+                .strokeBorder(stateColor.opacity(0.5), lineWidth: 2)
+                .frame(width: 110, height: 110)
+
+            // Inner: filled glowing core
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [stateColor.opacity(0.9), stateColor.opacity(0.2)],
+                        center: .center,
+                        startRadius: 4,
+                        endRadius: 35
+                    )
+                )
+                .frame(width: 60, height: 60)
+                .shadow(color: stateColor.opacity(0.7), radius: 12)
+                .scaleEffect(breathing ? 1.08 : 0.96)
+
+            // Hottest center dot
+            Circle()
+                .fill(Color.white)
+                .frame(width: 8, height: 8)
+                .shadow(color: stateColor, radius: 6)
+        }
+        .frame(width: 160, height: 160)
+        .shadow(color: stateColor.opacity(0.2 + 0.3 * pulseIntensity), radius: 30)
+        .onAppear {
+            withAnimation(.linear(duration: 24).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                breathing = true
+            }
+        }
+    }
+
+    /// 32 short cyan tick marks around a thin ring, drawn with TimelineView
+    /// for static performance.
+    private var outerTickRing: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(stateColor.opacity(0.4), lineWidth: 1)
+                .frame(width: 150, height: 150)
+            ForEach(0..<32, id: \.self) { i in
+                Rectangle()
+                    .fill(stateColor.opacity(i % 4 == 0 ? 0.9 : 0.45))
+                    .frame(width: 1, height: i % 4 == 0 ? 8 : 4)
+                    .offset(y: -75)
+                    .rotationEffect(.degrees(Double(i) * 360.0 / 32.0))
+            }
+        }
+        .frame(width: 160, height: 160)
+    }
+}
+
+/// Right-aligned live clock — refreshes every second via TimelineView.
+fileprivate struct LiveClockView: View {
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(timeString(context.date))
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
+                    .tracking(1.5)
+                    .foregroundColor(DS.Colors.jarvisAccent)
+                Text(timeZoneString())
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .tracking(1.0)
+                    .foregroundColor(DS.Colors.textTertiary)
+            }
+        }
+    }
+
+    private func timeString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        return f.string(from: date)
+    }
+
+    private func timeZoneString() -> String {
+        let abbreviation = TimeZone.current.abbreviation() ?? "UTC"
+        return abbreviation.uppercased()
     }
 }
