@@ -87,3 +87,23 @@ final class HermesSetupCoordinatorTests: XCTestCase {
         XCTAssertTrue(coord.environmentVariablesForSubprocess().isEmpty)
     }
 }
+
+extension HermesSetupCoordinatorTests {
+
+    /// Verifies that HermesClient appends a system error and does NOT
+    /// spawn a subprocess when setup is incomplete.
+    func testHermesClientWithNeedsSetupAppendsSystemErrorWithoutLaunching() async throws {
+        let reader = FakeKeyReader()  // no keys → needsSetup is true
+        let coord = HermesSetupCoordinator(hermesHome: tempHome, keyReader: reader)
+        let client = HermesClient(hermesHome: tempHome, setupCoordinator: coord)
+        await client.send("hello")
+        // Transcript: one user turn, one system error turn — no agent.
+        XCTAssertEqual(client.transcript.count, 2)
+        if case .system(_, let text) = client.transcript.last {
+            XCTAssertTrue(text.lowercased().contains("set up hermes"),
+                          "system error didn't mention setup: \(text)")
+        } else {
+            XCTFail("expected a system error as last transcript entry")
+        }
+    }
+}
