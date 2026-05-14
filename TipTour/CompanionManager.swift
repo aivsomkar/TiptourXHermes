@@ -273,10 +273,6 @@ final class CompanionManager: ObservableObject {
         print("[Tool] ✓ point_at_element(\"\(label)\") → \(resolution.label) via \(resolution.source) in \(elapsed)ms")
         pointAtResolution(resolution)
 
-        // Single-click ask — disarm any leftover ClickDetector state from a
-        // previous workflow.
-        ClickDetector.shared.disarm()
-
         // Mute screenshot pushes until the user speaks again so Gemini doesn't
         // re-emit the same tool call on a "user hasn't moved" frame.
         voiceBackend.suppressScreenshotsUntilUserSpeaks()
@@ -335,20 +331,6 @@ final class CompanionManager: ObservableObject {
     func setNekoModeEnabled(_ enabled: Bool) {
         isNekoModeEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "isNekoModeEnabled")
-    }
-
-    /// Debug flag for the workflow checklist: when true, ClickDetector
-    /// advances on ANY click instead of requiring the click to land
-    /// within 40pt of the resolved target.
-    @Published var advanceOnAnyClickEnabled: Bool = UserDefaults.standard.bool(forKey: "advanceOnAnyClickEnabled") {
-        didSet {
-            ClickDetector.advanceOnAnyClickEnabled = advanceOnAnyClickEnabled
-        }
-    }
-
-    func setAdvanceOnAnyClickEnabled(_ enabled: Bool) {
-        advanceOnAnyClickEnabled = enabled
-        UserDefaults.standard.set(enabled, forKey: "advanceOnAnyClickEnabled")
     }
 
     // MARK: - Onboarding
@@ -454,7 +436,6 @@ final class CompanionManager: ObservableObject {
         _ = voiceBackend
         bindShortcutTransitions()
         beginTrackingUserTargetApp()
-        ClickDetector.advanceOnAnyClickEnabled = advanceOnAnyClickEnabled
 
         // If the user already completed onboarding AND all permissions are
         // still granted, show the cursor overlay immediately. If permissions
