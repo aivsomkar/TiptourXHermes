@@ -1,6 +1,21 @@
 import XCTest
 @testable import TipTour
 
+/// Minimal in-memory tool used as a stand-in for any registered tool
+/// in tests. Keeps the MCPServer integration tests honest without
+/// needing AVSpeechSynthesizer or any other real side effect.
+private struct FakeMCPTool: MCPTool {
+    let name = "fake"
+    let description = "Returns a deterministic text block for tests."
+    let inputSchema: JSONValue = .object([
+        "type": .string("object"),
+        "properties": .object([:]),
+    ])
+    func call(_ arguments: JSONValue) async throws -> [MCPToolContent] {
+        return [.text("fake-ok")]
+    }
+}
+
 final class MCPServerTests: XCTestCase {
 
     // MARK: - Helpers
@@ -51,7 +66,7 @@ final class MCPServerTests: XCTestCase {
     @MainActor
     func testToolsListIncludesRegisteredTool() async throws {
         let server = MCPServer(name: "test")
-        server.register(SpeakTool())
+        server.register(FakeMCPTool())
         let url = try server.start()
         defer { server.stop() }
         let resp = try await postJSON(to: url, body: [
@@ -60,7 +75,7 @@ final class MCPServerTests: XCTestCase {
         let result = resp["result"] as? [String: Any]
         let tools = result?["tools"] as? [[String: Any]] ?? []
         XCTAssertEqual(tools.count, 1)
-        XCTAssertEqual(tools.first?["name"] as? String, "speak")
+        XCTAssertEqual(tools.first?["name"] as? String, "fake")
         XCTAssertNotNil(tools.first?["description"])
         XCTAssertNotNil(tools.first?["inputSchema"])
     }
@@ -68,18 +83,18 @@ final class MCPServerTests: XCTestCase {
     @MainActor
     func testToolsCallSpeakReturnsSuccess() async throws {
         let server = MCPServer(name: "test")
-        server.register(SpeakTool())
+        server.register(FakeMCPTool())
         let url = try server.start()
         defer { server.stop() }
         let resp = try await postJSON(to: url, body: [
             "jsonrpc": "2.0", "id": 3, "method": "tools/call",
-            "params": ["name": "speak", "arguments": ["text": "test"]]
+            "params": ["name": "fake", "arguments": [:]]
         ])
         let result = resp["result"] as? [String: Any]
         XCTAssertEqual(result?["isError"] as? Bool, false)
         let content = (result?["content"] as? [[String: Any]])?.first
         XCTAssertEqual(content?["type"] as? String, "text")
-        XCTAssertTrue((content?["text"] as? String ?? "").contains("test"))
+        XCTAssertEqual(content?["text"] as? String, "fake-ok")
     }
 
     @MainActor

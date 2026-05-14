@@ -410,7 +410,6 @@ final class CompanionManager: ObservableObject {
         // can't call our local tools.
         if hermesClient.mcpServerURL == nil {
             let resolver = AccessibilityTreeResolver()
-            mcpServer.register(SpeakTool())
             mcpServer.register(ScreenshotTool())
             mcpServer.register(A11yTreeTool(resolver: resolver))
             mcpServer.register(PointAtTool(resolver: resolver, companionManager: self))
