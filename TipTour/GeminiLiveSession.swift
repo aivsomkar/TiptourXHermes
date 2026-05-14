@@ -778,6 +778,16 @@ final class GeminiLiveSession: ObservableObject {
         case .toolCall(let id, let name, let args):
             handleToolCall(id: id, name: name, args: args)
 
+        case .toolCallCancellation(let ids):
+            for id in ids {
+                if let task = inFlightHandlerTasks[id] {
+                    print("[GeminiLiveSession] 🚫 cancelling in-flight handler for \(id)")
+                    task.cancel()
+                } else {
+                    print("[GeminiLiveSession] toolCallCancellation for unknown id \(id) — already finished?")
+                }
+            }
+
         case .unexpectedDisconnect(let error):
             // Server/network closed the socket without us asking. Try to
             // reconnect rather than tearing the whole session down — the
@@ -890,6 +900,12 @@ final class GeminiLiveSession: ObservableObject {
     /// and warn about duplicate calls (which would narrate twice).
     private var toolCallsThisTurn: Int = 0
 
+    /// Map of tool-call id → handler Task for currently-running tool
+    /// invocations. Used to cancel handlers when Gemini sends a
+    /// `toolCallCancellation`. Entries are removed once the handler
+    /// returns or is cancelled.
+    private var inFlightHandlerTasks: [String: Task<Void, Never>] = [:]
+
     /// Gemini's turn is paused until we send a toolResponse back, so this
     /// runs the handler on a Task and replies as soon as we have a result.
     /// Handlers are resolved from CompanionManager via the onPoint/onWorkflow
@@ -930,14 +946,15 @@ final class GeminiLiveSession: ObservableObject {
 
         let screenshot = latestCapture?.imageData
 
-        Task {
+        let handlerTask = Task { [weak self] in
+            guard let self = self else { return }
             var response: [String: Any] = ["ok": false, "error": "tool_unavailable"]
 
             switch name {
             case "point_at_element":
                 let label = (args["label"] as? String) ?? ""
                 let box2D = (args["box_2d"] as? [Int]).flatMap { $0.count == 4 ? $0 : nil }
-                if !label.isEmpty, let handler = onPointAtElement {
+                if !label.isEmpty, let handler = self.onPointAtElement {
                     response = await handler(id, label, box2D, screenshot)
                 } else {
                     print("[GeminiLiveSession] point_at_element called with no handler or empty label")
@@ -945,7 +962,7 @@ final class GeminiLiveSession: ObservableObject {
 
             case "ask_hermes":
                 let task = (args["task"] as? String) ?? ""
-                if !task.isEmpty, let handler = onAskHermes {
+                if !task.isEmpty, let handler = self.onAskHermes {
                     response = await handler(id, task)
                 } else {
                     print("[GeminiLiveSession] ask_hermes called with no handler or empty task")
@@ -956,9 +973,17 @@ final class GeminiLiveSession: ObservableObject {
                 response = ["ok": false, "error": "unknown_tool"]
             }
 
+            if Task.isCancelled {
+                print("[GeminiLiveSession] 🚫 dropping toolResponse for cancelled call \(id)")
+                await MainActor.run { self.inFlightHandlerTasks[id] = nil }
+                return
+            }
+
             print("[GeminiLiveSession] → toolResponse \(name) id=\(id) response=\(response)")
-            geminiClient.sendToolResponse(id: id, name: name, response: response)
+            self.geminiClient.sendToolResponse(id: id, name: name, response: response)
+            await MainActor.run { self.inFlightHandlerTasks[id] = nil }
         }
+        inFlightHandlerTasks[id] = handlerTask
     }
 
     // MARK: - Test support

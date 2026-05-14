@@ -49,14 +49,27 @@ final class HermesClient: ObservableObject {
     func send(_ userText: String) async {
         // Serialize concurrent send() calls so we never have two
         // session/prompt requests in flight on one Hermes session. See
-        // `sendQueueTail` doc for why.
+        // `sendQueueTail` doc for why. The 200ms grace at the start of the
+        // queued task gives Gemini a window to send a toolCallCancellation
+        // BEFORE we commit to sending the prompt — if the parent handler
+        // task is cancelled in that window, we bail without burning a
+        // Hermes turn.
         let prior = sendQueueTail
         let task = Task { [weak self] in
             _ = await prior?.value
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else {
+                print("[HermesClient] 🚫 send cancelled before reaching Hermes (queued)")
+                return
+            }
             await self?.actualSend(userText)
         }
         sendQueueTail = task
-        _ = await task.value
+
+        await withTaskCancellationHandler(
+            operation: { _ = await task.value },
+            onCancel: { task.cancel() }
+        )
     }
 
     private func actualSend(_ userText: String) async {

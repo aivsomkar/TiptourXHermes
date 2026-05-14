@@ -46,6 +46,14 @@ enum GeminiLiveEvent {
     /// Gemini can continue its turn.
     case toolCall(id: String, name: String, args: [String: Any])
 
+    /// Gemini wants to cancel previously-issued tool calls — typically
+    /// because it fired duplicate `ask_hermes` invocations for one
+    /// utterance and is now retracting the earlier ones. The session
+    /// orchestrator should cancel any in-flight handler tasks for these
+    /// ids and drop their eventual toolResponse so we don't burn a
+    /// Hermes turn on retracted work.
+    case toolCallCancellation(ids: [String])
+
     /// The WebSocket closed without us asking it to (server-initiated,
     /// network drop, etc.). The session orchestrator listens for this
     /// and may attempt to reconnect. Distinct from `.error` so the
@@ -553,6 +561,17 @@ final class GeminiLiveClient: @unchecked Sendable {
         // implementing resumption yet, so silently accept and ignore
         // instead of spamming "Unhandled message" logs every few seconds.
         if json["sessionResumptionUpdate"] != nil {
+            return
+        }
+
+        // 6. toolCallCancellation — Gemini retracts previously-issued
+        // tool calls (typically duplicate `ask_hermes` for one utterance).
+        // Forward the ids so the session can cancel in-flight handlers
+        // and drop their eventual responses.
+        if let cancellation = json["toolCallCancellation"] as? [String: Any] {
+            let ids = (cancellation["ids"] as? [String]) ?? []
+            print("[GeminiLive] toolCallCancellation ids=\(ids)")
+            dispatchEvent(.toolCallCancellation(ids: ids))
             return
         }
 

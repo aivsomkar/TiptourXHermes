@@ -292,9 +292,16 @@ final class CompanionManager: ObservableObject {
     /// already be pointing somewhere.
     @MainActor
     private func handleToolAskHermes(id: String, task: String) async -> [String: Any] {
+        if Task.isCancelled {
+            return ["ok": false, "error": "cancelled"]
+        }
         print("[Tool] 🔧 ask_hermes(task=\"\(task.prefix(80))\")")
         voiceState = .processing
         await hermesClient.send(task)
+        if Task.isCancelled {
+            print("[Tool] 🚫 ask_hermes cancelled before completion")
+            return ["ok": false, "error": "cancelled"]
+        }
         voiceState = .responding
         let replyText = hermesClient.lastAgentReplyText ?? ""
         print("[Tool] ✅ ask_hermes returning text.count=\(replyText.count)")
